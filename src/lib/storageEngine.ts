@@ -283,39 +283,54 @@ export const storageEngine = {
     const data = await supabaseEngine.syncAllFromSupabase();
     let hasChanges = false;
 
+    function mergeById<T extends { id: string }>(remote: T[], local: T[]): T[] {
+      const merged = [...remote];
+      for (const l of local) {
+        if (!merged.find((r) => r.id === l.id)) merged.push(l);
+      }
+      return merged;
+    }
+    function mergeByDayNum(remote: BusinessHours[], local: BusinessHours[]): BusinessHours[] {
+      const merged = [...remote];
+      for (const l of local) {
+        if (!merged.find((r) => r.dayNum === l.dayNum)) merged.push(l);
+      }
+      return merged;
+    }
+
     if (data.tenants && data.tenants.length > 0) {
-      setItem(STORAGE_KEYS.TENANTS, data.tenants);
+      const local = getItem<Tenant[]>(STORAGE_KEYS.TENANTS, DEFAULT_TENANTS);
+      setItem(STORAGE_KEYS.TENANTS, mergeById(data.tenants, local));
       hasChanges = true;
     }
     if (data.users && data.users.length > 0) {
-      const localUsers = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
-      const merged = [...data.users];
-      for (const local of localUsers) {
-        if (!merged.find((u) => u.id === local.id)) {
-          merged.push(local);
-        }
-      }
-      setItem(STORAGE_KEYS.USERS, merged);
+      const local = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
+      setItem(STORAGE_KEYS.USERS, mergeById(data.users, local));
       hasChanges = true;
     }
     if (data.services && data.services.length > 0) {
-      setItem(STORAGE_KEYS.SERVICES, data.services);
+      const local = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
+      setItem(STORAGE_KEYS.SERVICES, mergeById(data.services, local));
       hasChanges = true;
     }
     if (data.staff && data.staff.length > 0) {
-      setItem(STORAGE_KEYS.STAFF, data.staff);
+      const local = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
+      setItem(STORAGE_KEYS.STAFF, mergeById(data.staff, local));
       hasChanges = true;
     }
     if (data.appointments && data.appointments.length > 0) {
-      setItem(STORAGE_KEYS.APPOINTMENTS, data.appointments);
+      const local = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+      setItem(STORAGE_KEYS.APPOINTMENTS, mergeById(data.appointments, local));
       hasChanges = true;
     }
     if (data.businessHours && data.businessHours.length > 0) {
-      setItem(STORAGE_KEYS.BUSINESS_HOURS, data.businessHours);
+      const local = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
+      setItem(STORAGE_KEYS.BUSINESS_HOURS, mergeByDayNum(data.businessHours, local));
       hasChanges = true;
     }
     if (data.invitations && data.invitations.length > 0) {
-      setItem(STORAGE_KEYS.INVITATION_CODES, data.invitations);
+      const local = getItem<InvitationCode[]>(STORAGE_KEYS.INVITATION_CODES, DEFAULT_INVITATIONS);
+      setItem(STORAGE_KEYS.INVITATION_CODES, mergeById(data.invitations, local));
       hasChanges = true;
     }
 
@@ -531,6 +546,7 @@ export const storageEngine = {
       id: `usr-owner-${Date.now()}`,
       email: params.ownerEmail,
       full_name: params.ownerName,
+      password: '123456',
       role: 'owner',
       tenant_id: newTenant.id,
       phone: params.phone,
@@ -778,6 +794,7 @@ export const storageEngine = {
           STORAGE_KEYS.USERS,
           users.filter((u) => u.email.toLowerCase() !== target.email.toLowerCase())
         );
+        supabaseEngine.deleteUser(targetUser.id);
       }
     }
   },

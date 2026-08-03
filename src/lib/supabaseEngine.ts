@@ -52,10 +52,21 @@ export const supabaseEngine = {
       if (aptError) console.error('[EBD] sync appointments ERROR:', aptError.message);
       else if (aptData) result.appointments = aptData as Appointment[];
 
-      // 6. Business Hours
+      // 6. Business Hours (snake_case → camelCase)
       const { data: bhData, error: bhError } = await supabase.from('business_hours').select('*');
       if (bhError) console.error('[EBD] sync business_hours ERROR:', bhError.message);
-      else if (bhData) result.businessHours = bhData as BusinessHours[];
+      else if (bhData) {
+        result.businessHours = bhData.map((h: any) => ({
+          dayNum: h.day_num,
+          day: h.day,
+          isOpen: h.is_open,
+          startTime: h.start_time,
+          endTime: h.end_time,
+          breakStart: h.break_start,
+          breakEnd: h.break_end,
+          tenant_id: h.tenant_id,
+        })) as BusinessHours[];
+      }
 
       // 7. Invitations
       const { data: invData, error: invError } = await supabase.from('invitation_codes').select('*');
@@ -129,6 +140,28 @@ export const supabaseEngine = {
       else console.log('[EBD] deleteService OK:', id);
     } catch (e) {
       console.error('[EBD] deleteService EXCEPTION:', e);
+    }
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    if (!supabase) { console.warn('[EBD] deleteUser skipped: no Supabase client'); return; }
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) console.error('[EBD] deleteUser ERROR:', error.message, error.details);
+      else console.log('[EBD] deleteUser OK:', id);
+    } catch (e) {
+      console.error('[EBD] deleteUser EXCEPTION:', e);
+    }
+  },
+
+  async deleteTenant(id: string): Promise<void> {
+    if (!supabase) { console.warn('[EBD] deleteTenant skipped: no Supabase client'); return; }
+    try {
+      const { error } = await supabase.from('tenants').delete().eq('id', id);
+      if (error) console.error('[EBD] deleteTenant ERROR:', error.message, error.details);
+      else console.log('[EBD] deleteTenant OK:', id);
+    } catch (e) {
+      console.error('[EBD] deleteTenant EXCEPTION:', e);
     }
   },
 
