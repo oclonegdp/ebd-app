@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Lock, X, Key, Store, CheckSquare, Square, Shield } from 'lucide-react';
-import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_DEFAULT_PASSWORD } from '../../lib/storageEngine';
+import { User, Lock, X, Key, Store, CheckSquare, Square } from 'lucide-react';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -66,16 +65,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
     onClose();
   };
 
-  const handleSuperAdminLogin = () => {
-    setErrorMsg(null);
-    const success = login(SUPER_ADMIN_EMAIL, SUPER_ADMIN_DEFAULT_PASSWORD);
-    if (success) {
-      onClose();
-    } else {
-      setErrorMsg('Erro ao entrar como Super Admin.');
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-[#16191F] border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative">
@@ -93,25 +82,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
           </div>
           <h2 className="text-xl font-bold text-white">EBD ElBravoDantas</h2>
           <p className="text-xs text-slate-400 mt-0.5">Acesse seu Painel com E-mail e Senha Privada</p>
-        </div>
-
-        {/* Super Admin Quick Access */}
-        <button
-          type="button"
-          onClick={handleSuperAdminLogin}
-          className="w-full mb-4 py-2.5 rounded-lg bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-bold text-xs shadow-md shadow-yellow-500/20 transition cursor-pointer flex items-center justify-center gap-2 active:scale-95"
-        >
-          <Shield className="w-4 h-4" />
-          Entrar como Super Admin Mestre
-        </button>
-
-        <div className="relative mb-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-700"></div>
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-[#16191F] px-2 text-slate-500">ou entre com e-mail e senha</span>
-          </div>
         </div>
 
         {errorMsg && (

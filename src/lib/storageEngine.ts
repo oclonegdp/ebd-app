@@ -1,7 +1,5 @@
 import { Tenant, User, Service, StaffMember, Appointment, BusinessHours, InvitationCode } from '../types';
-
-export const SUPER_ADMIN_EMAIL = 'superadmin@ebd.com';
-export const SUPER_ADMIN_DEFAULT_PASSWORD = 'admin123';
+import { supabaseEngine } from './supabaseEngine';
 
 const STORAGE_KEYS = {
   TENANTS: 'ebd_tenants_v1',
@@ -255,24 +253,6 @@ export function initStorage(): void {
   if (!localStorage.getItem(STORAGE_KEYS.TENANTS)) {
     setItem(STORAGE_KEYS.TENANTS, DEFAULT_TENANTS);
   }
-
-  // Always ensure super_admin user exists (even if USERS key already has data)
-  const users = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
-  const hasSuperAdmin = users.some(
-    (u) => u.email.toLowerCase() === SUPER_ADMIN_EMAIL && u.role === 'super_admin'
-  );
-  if (!hasSuperAdmin) {
-    users.unshift({
-      id: 'usr-superadmin',
-      email: SUPER_ADMIN_EMAIL,
-      password: SUPER_ADMIN_DEFAULT_PASSWORD,
-      full_name: 'Super Admin Mestre',
-      role: 'super_admin',
-      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-    });
-    setItem(STORAGE_KEYS.USERS, users);
-  }
-
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
     setItem(STORAGE_KEYS.USERS, DEFAULT_USERS);
   }
@@ -298,6 +278,77 @@ export function initStorage(): void {
 
 // Data API Engine
 export const storageEngine = {
+  // SUPABASE SYNC
+  async syncFromSupabase(): Promise<boolean> {
+    const data = await supabaseEngine.syncAllFromSupabase();
+    let hasChanges = false;
+
+    if (data.tenants && data.tenants.length > 0) {
+      setItem(STORAGE_KEYS.TENANTS, data.tenants);
+      hasChanges = true;
+    }
+    if (data.users && data.users.length > 0) {
+      setItem(STORAGE_KEYS.USERS, data.users);
+      hasChanges = true;
+    }
+    if (data.services && data.services.length > 0) {
+      setItem(STORAGE_KEYS.SERVICES, data.services);
+      hasChanges = true;
+    }
+    if (data.staff && data.staff.length > 0) {
+      setItem(STORAGE_KEYS.STAFF, data.staff);
+      hasChanges = true;
+    }
+    if (data.appointments && data.appointments.length > 0) {
+      setItem(STORAGE_KEYS.APPOINTMENTS, data.appointments);
+      hasChanges = true;
+    }
+    if (data.businessHours && data.businessHours.length > 0) {
+      setItem(STORAGE_KEYS.BUSINESS_HOURS, data.businessHours);
+      hasChanges = true;
+    }
+    if (data.invitations && data.invitations.length > 0) {
+      setItem(STORAGE_KEYS.INVITATION_CODES, data.invitations);
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
+    } else {
+      // Seed default data if remote is empty
+      supabaseEngine.seedDefaultsIfEmpty({
+        tenants: DEFAULT_TENANTS,
+        users: DEFAULT_USERS,
+        services: DEFAULT_SERVICES,
+        staff: DEFAULT_STAFF,
+        invitations: DEFAULT_INVITATIONS,
+      });
+    }
+
+    return hasChanges;
+  },
+
+  async fetchAndSyncTenantBySlug(slug: string): Promise<Tenant | undefined> {
+    const clean = slug.trim().toLowerCase();
+    const local = this.getTenantBySlug(clean);
+
+    const remoteTenant = await supabaseEngine.fetchTenantBySlug(clean);
+    if (remoteTenant) {
+      const tenants = this.getTenants();
+      const idx = tenants.findIndex((t) => t.id === remoteTenant.id || t.slug.toLowerCase() === clean);
+      if (idx !== -1) {
+        tenants[idx] = remoteTenant;
+      } else {
+        tenants.push(remoteTenant);
+      }
+      setItem(STORAGE_KEYS.TENANTS, tenants);
+      window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
+      return remoteTenant;
+    }
+
+    return local;
+  },
+
   // TENANTS
   getTenants(): Tenant[] {
     return getItem<Tenant[]>(STORAGE_KEYS.TENANTS, DEFAULT_TENANTS);
@@ -320,6 +371,11 @@ export const storageEngine = {
       t.id === id ? { ...t, active: !t.active } : t
     );
     setItem(STORAGE_KEYS.TENANTS, tenants);
+
+    const updated = tenants.find((t) => t.id === id);
+    if (updated) {
+      supabaseEngine.upsertTenant(updated);
+    }
     return tenants;
   },
 
@@ -372,12 +428,14 @@ export const storageEngine = {
         role: 'owner',
         tenant_id: newTenant.id,
         phone: params.phone || users[existingUserIdx].phone,
+        ...(params.ownerPassword ? { password: params.ownerPassword } : {}),
       };
       newOwner = users[existingUserIdx];
     } else {
       newOwner = {
         id: `usr-owner-${Date.now()}`,
         email: params.ownerEmail,
+        password: params.ownerPassword || '123456',
         full_name: params.ownerName,
         role: 'owner',
         tenant_id: newTenant.id,
@@ -394,7 +452,7 @@ export const storageEngine = {
 
     // Initialize basic default service for the new tenant
     const services = this.getServices();
-    services.push({
+    const defaultService: Service = {
       id: `srv-${Date.now()}`,
       tenant_id: newTenant.id,
       name: 'Corte de Cabelo Básico',
@@ -403,8 +461,14 @@ export const storageEngine = {
       price: 50.0,
       image_url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&auto=format&fit=crop&q=80',
       category: 'Cabelo',
-    });
+    };
+    services.push(defaultService);
     setItem(STORAGE_KEYS.SERVICES, services);
+
+    // Save to Supabase
+    supabaseEngine.upsertTenant(newTenant);
+    supabaseEngine.upsertUser(newOwner);
+    supabaseEngine.upsertService(defaultService);
 
     return { tenant: newTenant, owner: newOwner };
   },
@@ -476,6 +540,11 @@ export const storageEngine = {
     setItem(STORAGE_KEYS.USERS, users);
     setItem(STORAGE_KEYS.INVITATION_CODES, invitations);
 
+    // Save to Supabase
+    supabaseEngine.upsertTenant(newTenant);
+    supabaseEngine.upsertUser(newOwner);
+    supabaseEngine.upsertInvitationCode(invite);
+
     return { tenant: newTenant, owner: newOwner };
   },
 
@@ -499,6 +568,8 @@ export const storageEngine = {
     };
     invitations.unshift(newCode);
     setItem(STORAGE_KEYS.INVITATION_CODES, invitations);
+
+    supabaseEngine.upsertInvitationCode(newCode);
     return newCode;
   },
 
@@ -555,6 +626,8 @@ export const storageEngine = {
     users[idx] = updatedUser;
     setItem(STORAGE_KEYS.USERS, users);
 
+    supabaseEngine.upsertUser(updatedUser);
+
     // If staff user, update StaffMember record as well
     if (updatedUser.role === 'staff' || updatedUser.role === 'owner') {
       const staffList = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
@@ -570,6 +643,7 @@ export const storageEngine = {
           ...(updates.bio ? { bio: updates.bio } : {}),
         };
         setItem(STORAGE_KEYS.STAFF, staffList);
+        supabaseEngine.upsertStaff(staffList[staffIdx]);
       }
     }
 
@@ -586,6 +660,8 @@ export const storageEngine = {
     const updatedTenant = { ...tenants[idx], ...updates };
     tenants[idx] = updatedTenant;
     setItem(STORAGE_KEYS.TENANTS, tenants);
+
+    supabaseEngine.upsertTenant(updatedTenant);
     return updatedTenant;
   },
 
@@ -609,11 +685,15 @@ export const storageEngine = {
       services.push(updated);
     }
     setItem(STORAGE_KEYS.SERVICES, services);
+
+    supabaseEngine.upsertService(updated);
     return updated;
   },
   deleteService(id: string): void {
     const services = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
     setItem(STORAGE_KEYS.SERVICES, services.filter((s) => s.id !== id));
+
+    supabaseEngine.deleteService(id);
   },
 
   // STAFF
@@ -643,6 +723,7 @@ export const storageEngine = {
       (u) => u.email.toLowerCase() === member.email.toLowerCase()
     );
 
+    let correspondingUser: User;
     if (existingUserIdx !== -1) {
       users[existingUserIdx] = {
         ...users[existingUserIdx],
@@ -651,19 +732,26 @@ export const storageEngine = {
         tenant_id: member.tenant_id,
         avatar_url: member.avatar_url,
         phone: member.phone,
+        ...(password ? { password } : {}),
       };
+      correspondingUser = users[existingUserIdx];
     } else {
-      users.push({
+      correspondingUser = {
         id: `usr-staff-${Date.now()}`,
         email: member.email,
+        password: password || '123456',
         full_name: member.name,
         role: 'staff',
         tenant_id: member.tenant_id,
         avatar_url: member.avatar_url,
         phone: member.phone,
-      });
+      };
+      users.push(correspondingUser);
     }
     setItem(STORAGE_KEYS.USERS, users);
+
+    supabaseEngine.upsertStaff(updated);
+    supabaseEngine.upsertUser(correspondingUser);
 
     return updated;
   },
@@ -673,13 +761,17 @@ export const storageEngine = {
     if (target) {
       // Remove staff record
       setItem(STORAGE_KEYS.STAFF, staff.filter((s) => s.id !== id));
+      supabaseEngine.deleteStaff(id);
       
       // Optionally remove corresponding staff user
       const users = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
-      setItem(
-        STORAGE_KEYS.USERS,
-        users.filter((u) => u.email.toLowerCase() !== target.email.toLowerCase())
-      );
+      const targetUser = users.find((u) => u.email.toLowerCase() === target.email.toLowerCase());
+      if (targetUser) {
+        setItem(
+          STORAGE_KEYS.USERS,
+          users.filter((u) => u.email.toLowerCase() !== target.email.toLowerCase())
+        );
+      }
     }
   },
 
@@ -700,12 +792,19 @@ export const storageEngine = {
     };
     appointments.unshift(newApt);
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments);
+
+    supabaseEngine.upsertAppointment(newApt);
     return newApt;
   },
   updateAppointmentStatus(id: string, status: 'confirmed' | 'completed' | 'cancelled'): void {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
     const updated = appointments.map((a) => (a.id === id ? { ...a, status } : a));
     setItem(STORAGE_KEYS.APPOINTMENTS, updated);
+
+    const target = updated.find((a) => a.id === id);
+    if (target) {
+      supabaseEngine.upsertAppointment(target);
+    }
   },
   updateAppointment(id: string, updates: Partial<Appointment>): Appointment {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
@@ -716,11 +815,15 @@ export const storageEngine = {
     const updated = { ...appointments[idx], ...updates };
     appointments[idx] = updated;
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments);
+
+    supabaseEngine.upsertAppointment(updated);
     return updated;
   },
   deleteAppointment(id: string): void {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments.filter((a) => a.id !== id));
+
+    supabaseEngine.deleteAppointment(id);
   },
 
   // BUSINESS HOURS
@@ -729,6 +832,8 @@ export const storageEngine = {
   },
   saveBusinessHours(hours: BusinessHours[]): void {
     setItem(STORAGE_KEYS.BUSINESS_HOURS, hours);
+
+    supabaseEngine.saveBusinessHours(hours);
   }
 };
 

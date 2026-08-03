@@ -33,6 +33,17 @@ export const WeeklySchedule: React.FC = () => {
 
   useEffect(() => {
     loadAppointments();
+
+    const handleSync = () => {
+      if (currentTenant) {
+        setAppointments(storageEngine.getAppointments(currentTenant.id));
+      }
+    };
+
+    window.addEventListener('ebd_storage_synced', handleSync);
+    return () => {
+      window.removeEventListener('ebd_storage_synced', handleSync);
+    };
   }, [currentTenant]);
 
   const handleUpdateStatus = (id: string, status: 'completed' | 'cancelled') => {

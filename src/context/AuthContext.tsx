@@ -59,12 +59,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isIsolatedVitrine, setIsIsolatedVitrine] = useState(false);
   const [urlSlugError, setUrlSlugError] = useState<string | null>(null);
 
+  // Sync data from Supabase on mount and listen to storage sync events
+  useEffect(() => {
+    let isMounted = true;
+
+    // Initial Supabase global sync
+    storageEngine.syncFromSupabase().then(() => {
+      if (isMounted) {
+        refreshData();
+      }
+    });
+
+    const handleStorageSynced = () => {
+      if (isMounted) {
+        refreshData();
+      }
+    };
+
+    window.addEventListener('ebd_storage_synced', handleStorageSynced);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('ebd_storage_synced', handleStorageSynced);
+    };
+  }, []);
+
   // Check URL slug for direct showcase link access
   useEffect(() => {
-    const handleUrlSlugCheck = () => {
+    const handleUrlSlugCheck = async () => {
       const urlSlug = getSlugFromURL();
       if (urlSlug) {
-        const found = storageEngine.getTenantBySlug(urlSlug);
+        // Try local or fetch directly from Supabase if needed
+        const found = await storageEngine.fetchAndSyncTenantBySlug(urlSlug);
         if (found) {
           setCurrentTenant(found);
           storageEngine.setActiveTenantId(found.id);

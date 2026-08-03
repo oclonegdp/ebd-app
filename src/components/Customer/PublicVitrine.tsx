@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Scissors, Calendar, Clock, MapPin, MessageSquare, CheckCircle2, User, X, Copy, Check, Link as LinkIcon, Store, Search, Filter, AlertCircle, Crown } from 'lucide-react';
 import { storageEngine } from '../../lib/storageEngine';
+import { supabaseEngine } from '../../lib/supabaseEngine';
 import { getStorePublicUrl } from '../../lib/urlUtils';
 import { Service, StaffMember, Appointment } from '../../types';
 import { BannerSkeleton, CardSkeleton, ListSkeleton } from '../UI/LoadingSkeleton';
@@ -48,7 +49,19 @@ export const PublicVitrine: React.FC = () => {
         setAppointments(storageEngine.getAppointments(currentTenant.id));
         setIsLoading(false);
       }, 350);
-      return () => clearTimeout(timer);
+
+      const handleSync = () => {
+        setServices(storageEngine.getServices(currentTenant.id));
+        setStaffMembers(storageEngine.getStaff(currentTenant.id));
+        setAppointments(storageEngine.getAppointments(currentTenant.id));
+      };
+
+      window.addEventListener('ebd_storage_synced', handleSync);
+
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('ebd_storage_synced', handleSync);
+      };
     }
   }, [currentTenant]);
 
@@ -83,11 +96,11 @@ export const PublicVitrine: React.FC = () => {
     setIsBookingModalOpen(true);
   };
 
-  const handleConfirmBooking = (e: React.FormEvent) => {
+  const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentTenant || !selectedService || !selectedStaff) return;
 
-    storageEngine.createAppointment({
+    const newAppointment = storageEngine.createAppointment({
       tenant_id: currentTenant.id,
       service_id: selectedService.id,
       staff_id: selectedStaff.id,
@@ -101,6 +114,12 @@ export const PublicVitrine: React.FC = () => {
       payment_method: paymentMethod,
     });
 
+    // Directly guarantee write to Supabase table
+    await supabaseEngine.upsertAppointment(newAppointment);
+
+    // Notify other components (Owner schedule, etc) in real time
+    window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
+
     setIsSuccess(true);
     setAppointments(storageEngine.getAppointments(currentTenant.id));
 
@@ -112,8 +131,9 @@ export const PublicVitrine: React.FC = () => {
     }, 2000);
   };
 
-  const handleCancelAppointment = (id: string) => {
+  const handleCancelAppointment = async (id: string) => {
     storageEngine.updateAppointmentStatus(id, 'cancelled');
+    window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
     if (currentTenant) {
       setAppointments(storageEngine.getAppointments(currentTenant.id));
     }

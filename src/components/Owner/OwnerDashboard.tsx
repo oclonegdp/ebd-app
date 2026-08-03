@@ -37,7 +37,17 @@ export const OwnerDashboard: React.FC = () => {
         loadAppointments();
         setIsLoading(false);
       }, 300);
-      return () => clearTimeout(timer);
+
+      const handleSync = () => {
+        loadAppointments();
+      };
+
+      window.addEventListener('ebd_storage_synced', handleSync);
+
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('ebd_storage_synced', handleSync);
+      };
     }
   }, [currentTenant]);
 
