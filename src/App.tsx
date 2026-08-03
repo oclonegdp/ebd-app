@@ -1,102 +1,92 @@
 import React, { useState } from 'react';
-import { AppProvider, useApp } from './context/AppContext';
-import { Sidebar } from './components/Sidebar';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
-import { TenantHeaderBadge } from './components/TenantHeaderBadge';
-import { DashboardView } from './components/DashboardView';
-import { WeeklyScheduleView } from './components/WeeklyScheduleView';
-import { StorefrontView } from './components/StorefrontView';
-import { ServicesManagementView } from './components/ServicesManagementView';
-import { StaffSection } from './components/StaffSection';
-import { StaffPortalView } from './components/StaffPortalView';
-import { WorkScheduleManagementView } from './components/WorkScheduleManagementView';
-import { NotificationsView } from './components/NotificationsView';
-import { SettingsView } from './components/SettingsView';
-import { AuthModal } from './components/AuthModal';
-import { BookingModal } from './components/BookingModal';
-import { SuperAdminModal } from './components/SuperAdminModal';
-import { InviteCodeModal } from './components/InviteCodeModal';
-import { Toast } from './components/Toast';
+import { Sidebar } from './components/Sidebar';
+import { PublicVitrine } from './components/Customer/PublicVitrine';
+import { SuperAdminDashboard } from './components/SuperAdmin/SuperAdminDashboard';
+import { OwnerDashboard } from './components/Owner/OwnerDashboard';
+import { WeeklySchedule } from './components/Owner/WeeklySchedule';
+import { ServicesManager } from './components/Owner/ServicesManager';
+import { StaffManager } from './components/Owner/StaffManager';
+import { BusinessHoursManager } from './components/Owner/BusinessHoursManager';
+import { StaffDashboard } from './components/Staff/StaffDashboard';
+import { AccessDeniedScreen } from './components/RBAC/AccessDeniedScreen';
 
-const MainLayout: React.FC = () => {
-  const { activeTab, viewMode, currentUser } = useApp();
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+const MainAppContent: React.FC = () => {
+  const { currentUser, viewMode } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (currentUser?.role === 'super_admin') return 'superadmin_dashboard';
+    if (currentUser?.role === 'staff') return 'staff_dashboard';
+    return 'owner_dashboard';
+  });
 
-  const isClient = !currentUser || currentUser.role === 'client' || viewMode === 'client';
-  const isStaff = currentUser?.role === 'staff';
-
-  const renderContent = () => {
-    if (isClient) {
-      if (activeTab === 'notifications') return <NotificationsView />;
-      return <StorefrontView />;
+  React.useEffect(() => {
+    if (currentUser?.role === 'super_admin') {
+      setActiveTab('superadmin_dashboard');
+    } else if (currentUser?.role === 'staff') {
+      setActiveTab('staff_dashboard');
+    } else if (currentUser?.role === 'owner') {
+      setActiveTab('owner_dashboard');
     }
+  }, [currentUser?.id, currentUser?.role]);
 
-    if (isStaff) {
-      if (activeTab === 'expediente') return <WorkScheduleManagementView />;
-      if (activeTab === 'storefront') return <StorefrontView />;
-      if (activeTab === 'notifications') return <NotificationsView />;
-      return <StaffPortalView />;
-    }
-
-    // Owner / Super Admin
-    switch (activeTab) {
-      case 'dashboard':
-        return <DashboardView />;
-      case 'schedule':
-        return <WeeklyScheduleView />;
-      case 'expediente':
-        return <WorkScheduleManagementView />;
-      case 'storefront':
-        return <StorefrontView />;
-      case 'services':
-        return <ServicesManagementView />;
-      case 'staff':
-        return <StaffSection />;
-      case 'notifications':
-        return <NotificationsView />;
-      case 'settings':
-        return <SettingsView />;
-      default:
-        return <DashboardView />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col md:flex-row antialiased font-sans">
-      {/* Dark Sidebar Menu */}
-      <Sidebar 
-        isOpenMobile={mobileSidebarOpen} 
-        onCloseMobile={() => setMobileSidebarOpen(false)} 
-      />
-
-      {/* Main Content Body */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Top Header */}
-        <Header onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
-        
-        {/* Multi-Tenant Active Banner */}
-        <TenantHeaderBadge />
-
-        {/* Dynamic Tab Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {renderContent()}
+  // Client view
+  if (viewMode === 'client') {
+    return (
+      <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <PublicVitrine />
         </main>
       </div>
+    );
+  }
 
-      {/* Global Modals & Notifications */}
-      <AuthModal />
-      <BookingModal />
-      <SuperAdminModal />
-      <InviteCodeModal />
-      <Toast />
+  // Admin view without authorization
+  if (!currentUser || currentUser.role === 'customer') {
+    return (
+      <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <AccessDeniedScreen />
+        </main>
+      </div>
+    );
+  }
+
+  // Render Admin View
+  return (
+    <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
+      <Header
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+        <main key={activeTab} className="flex-1 overflow-y-auto animate-fade-in">
+          {activeTab === 'superadmin_dashboard' && <SuperAdminDashboard />}
+          {activeTab === 'owner_dashboard' && <OwnerDashboard />}
+          {activeTab === 'weekly_schedule' && <WeeklySchedule />}
+          {activeTab === 'services_manager' && <ServicesManager />}
+          {activeTab === 'staff_manager' && <StaffManager />}
+          {activeTab === 'business_hours' && <BusinessHoursManager />}
+          {activeTab === 'staff_dashboard' && <StaffDashboard />}
+        </main>
+      </div>
     </div>
   );
 };
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
+    <AuthProvider>
+      <MainAppContent />
+    </AuthProvider>
   );
 }

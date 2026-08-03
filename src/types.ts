@@ -1,134 +1,89 @@
-export type UserRole = 'superadmin' | 'admin' | 'staff' | 'client';
+export type UserRole = 'super_admin' | 'owner' | 'staff' | 'customer';
 
 export interface User {
   id: string;
-  name: string;
   email: string;
+  full_name: string;
   role: UserRole;
-  businessId?: string; // Bound business for admin/owner or staff
-  staffId?: string; // Bound staff member when role is staff
-  avatarUrl?: string;
+  tenant_id?: string;
+  avatar_url?: string;
   phone?: string;
 }
 
-export interface UserAccount {
+export interface Tenant {
   id: string;
   name: string;
-  email: string;
-  passwordHash: string;
-  role: UserRole;
-  businessId?: string;
-  staffId?: string;
-  createdAt: string;
-}
-
-export type BusinessCategory = 'barbearia' | 'academia' | 'beleza' | 'saude' | 'outros';
-
-export interface Business {
-  id: string;
-  name: string;
-  category: BusinessCategory;
-  description: string;
-  inviteCode: string; // Ex: TONI2026, CORTEARTES
-  slug: string; // Ex: toni-do-corte, corte-artes
-  ownerName?: string;
-  ownerEmail?: string;
-  ownerPassword?: string;
-  planExpiresAt?: string; // e.g. YYYY-MM-DD
-  logoUrl: string;
-  coverBannerUrl: string;
-  address: string;
-  city: string;
-  phone: string;
-  whatsapp: string;
-  email: string;
-  instagram?: string;
-  rating: number;
-  totalReviews: number;
-  isOpen: boolean;
-  workingHours: string;
-  slotIntervalMinutes: number;
+  slug: string;
+  logo_url?: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  created_at: string;
+  active: boolean;
+  plan?: 'trial' | 'pro' | 'enterprise';
+  license_expires_at?: string;
+  max_staff?: number;
 }
 
 export interface Service {
   id: string;
-  businessId: string;
+  tenant_id: string;
   name: string;
-  category: string;
   description: string;
-  durationMinutes: number;
-  price: number; // In BRL (R$)
-  iconName?: string;
+  duration_minutes: number;
+  price: number;
+  image_url?: string;
+  category?: string;
 }
 
 export interface StaffMember {
   id: string;
-  businessId: string;
+  tenant_id: string;
   name: string;
-  role: string;
-  email?: string;
-  password?: string;
-  avatarUrl: string;
-  bio: string;
-  rating: number;
+  email: string;
+  phone?: string;
+  bio?: string;
+  avatar_url?: string;
   specialties: string[];
-  availableDays: string[]; // e.g. ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-  workStart: string; // "08:00"
-  workEnd: string; // "19:00"
-  lunchStart?: string; // "12:00"
-  lunchEnd?: string; // "13:00"
-  phone: string;
+  commission_rate?: number;
+  service_ids?: string[];
+  working_hours?: BusinessHours[];
 }
-
-export interface BlockedSlot {
-  id: string;
-  businessId: string;
-  staffId: string; // 'all' or specific staff ID
-  staffName?: string;
-  date: string; // YYYY-MM-DD
-  timeSlot: string; // HH:mm e.g. "14:00"
-  reason: string; // "Intervalo", "Compromisso pessoal", "Bloqueio de Agenda", etc.
-  createdAt: string;
-}
-
-export type AppointmentStatus = 'confirmed' | 'pending' | 'completed' | 'cancelled';
 
 export interface Appointment {
   id: string;
-  businessId: string;
-  clientName: string;
-  clientPhone: string;
-  clientEmail?: string;
-  serviceId: string;
-  serviceName: string;
-  servicePrice: number;
-  durationMinutes: number;
-  staffId: string;
-  staffName: string;
-  staffAvatar: string;
-  date: string; // YYYY-MM-DD
-  timeSlot: string; // HH:mm (e.g. "10:00")
-  status: AppointmentStatus;
-  notes?: string;
-  createdAt: string;
+  tenant_id: string;
+  service_id: string;
+  staff_id: string;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  price: number;
+  status: 'confirmed' | 'completed' | 'cancelled';
+  payment_method?: 'local' | 'online_simulated';
+  created_at: string;
 }
 
-export interface NotificationItem {
+export interface BusinessHours {
+  dayNum: number;
+  day: string;
+  isOpen: boolean;
+  startTime: string;
+  endTime: string;
+  breakStart: string;
+  breakEnd: string;
+}
+
+export interface InvitationCode {
   id: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  type: 'booking' | 'cancellation' | 'reminder' | 'system';
+  code: string;
+  role: 'owner' | 'staff';
+  tenant_id?: string;
+  max_uses: number;
+  uses_count: number;
+  created_at: string;
+  active: boolean;
 }
-
-export type ActiveTab = 
-  | 'dashboard' 
-  | 'schedule' 
-  | 'expediente'
-  | 'minha-agenda'
-  | 'storefront' 
-  | 'services' 
-  | 'staff' 
-  | 'notifications' 
-  | 'settings';

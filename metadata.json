@@ -1,0 +1,6 @@
+{
+  "name": "EBD ElBravoDantas",
+  "description": "Plataforma SaaS Multi-Tenant de Agendamento e Gestão para Pequenos e Médios Estabelecimentos",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
