@@ -288,7 +288,14 @@ export const storageEngine = {
       hasChanges = true;
     }
     if (data.users && data.users.length > 0) {
-      setItem(STORAGE_KEYS.USERS, data.users);
+      const localUsers = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
+      const merged = [...data.users];
+      for (const local of localUsers) {
+        if (!merged.find((u) => u.id === local.id)) {
+          merged.push(local);
+        }
+      }
+      setItem(STORAGE_KEYS.USERS, merged);
       hasChanges = true;
     }
     if (data.services && data.services.length > 0) {
