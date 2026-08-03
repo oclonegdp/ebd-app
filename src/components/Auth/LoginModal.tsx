@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Lock, X, ShieldCheck, Key } from 'lucide-react';
+import { User, Lock, X, Key } from 'lucide-react';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -20,18 +20,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
     if (success) {
       onClose();
     } else {
-      setErrorMsg('E-mail não encontrado. Utilize um dos atalhos rápidos abaixo para testar.');
+      setErrorMsg('E-mail não encontrado.');
     }
-  };
-
-  const handleQuickSuperAdmin = () => {
-    login('superadmin@ebd.com');
-    onClose();
-  };
-
-  const handleQuickLoginRole = (targetEmail: string) => {
-    login(targetEmail);
-    onClose();
   };
 
   return (
@@ -96,36 +86,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
             Entrar no Painel
           </button>
         </form>
-
-        {/* Preset Quick Login Section */}
-        <div className="mt-6 pt-4 border-t border-slate-800 space-y-2">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider text-center font-bold">
-            Atalhos Rápidos por Nível de Permissão (RBAC)
-          </p>
-
-          <button
-            onClick={handleQuickSuperAdmin}
-            className="w-full py-2 px-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-bold text-xs hover:bg-yellow-500/20 flex items-center justify-center space-x-2 transition cursor-pointer"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Entrar como Super Admin Mestre</span>
-          </button>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleQuickLoginRole('anamaria@ebdbarber.com')}
-              className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition"
-            >
-              Dono da Loja (Owner)
-            </button>
-            <button
-              onClick={() => handleQuickLoginRole('mariana@ebdbarber.com')}
-              className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition"
-            >
-              Profissional (Staff)
-            </button>
-          </div>
-        </div>
 
         {/* Registration by invitation link */}
         <div className="mt-4 pt-3 text-center border-t border-slate-800/80">
