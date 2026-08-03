@@ -76,6 +76,7 @@ export interface BusinessHours {
   endTime: string;
   breakStart: string;
   breakEnd: string;
+  tenant_id?: string;
 }
 
 export interface InvitationCode {

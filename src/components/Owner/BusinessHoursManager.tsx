@@ -6,7 +6,7 @@ import { BusinessHours } from '../../types';
 
 export const BusinessHoursManager: React.FC = () => {
   const { currentTenant } = useAuth();
-  const [schedule, setSchedule] = useState<BusinessHours[]>(() => storageEngine.getBusinessHours());
+  const [schedule, setSchedule] = useState<BusinessHours[]>(() => storageEngine.getBusinessHours(currentTenant?.id));
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const handleToggleDay = (idx: number) => {
@@ -22,7 +22,7 @@ export const BusinessHoursManager: React.FC = () => {
   };
 
   const handleSaveAll = () => {
-    storageEngine.saveBusinessHours(schedule);
+    storageEngine.saveBusinessHours(schedule, currentTenant?.id);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };

@@ -822,8 +822,22 @@ export const storageEngine = {
     }
     return appointments;
   },
+  hasScheduleConflict(staffId: string, date: string, startTime: string, endTime: string, excludeId?: string): boolean {
+    const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+    return appointments.some((a) => {
+      if (a.id === excludeId) return false;
+      if (a.staff_id !== staffId || a.date !== date) return false;
+      if (a.status === 'cancelled') return false;
+      return startTime < a.end_time && endTime > a.start_time;
+    });
+  },
   createAppointment(apt: Omit<Appointment, 'id' | 'created_at'>): Appointment {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+
+    if (this.hasScheduleConflict(apt.staff_id, apt.date, apt.start_time, apt.end_time)) {
+      throw new Error('Conflito de horário: este profissional já possui agendamento neste horário.');
+    }
+
     const newApt: Appointment = {
       ...apt,
       id: `apt-${Date.now()}`,
@@ -865,14 +879,22 @@ export const storageEngine = {
     supabaseEngine.deleteAppointment(id).catch(() => {});
   },
 
-  // BUSINESS HOURS
-  getBusinessHours(): BusinessHours[] {
-    return getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
+  // BUSINESS HOURS (per-tenant)
+  getBusinessHours(tenantId?: string): BusinessHours[] {
+    const all = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
+    if (tenantId) {
+      const filtered = all.filter((h) => h.tenant_id === tenantId);
+      if (filtered.length > 0) return filtered;
+    }
+    return all.filter((h) => !h.tenant_id);
   },
-  saveBusinessHours(hours: BusinessHours[]): void {
-    setItem(STORAGE_KEYS.BUSINESS_HOURS, hours);
+  saveBusinessHours(hours: BusinessHours[], tenantId?: string): void {
+    const all = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
+    const tagged = hours.map((h) => ({ ...h, tenant_id: tenantId || h.tenant_id }));
+    const others = all.filter((h) => h.tenant_id && h.tenant_id !== tenantId);
+    setItem(STORAGE_KEYS.BUSINESS_HOURS, [...others, ...tagged]);
 
-    supabaseEngine.saveBusinessHours(hours);
+    supabaseEngine.saveBusinessHours(tagged);
   }
 };
 

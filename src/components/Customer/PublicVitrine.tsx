@@ -32,6 +32,7 @@ export const PublicVitrine: React.FC = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'local' | 'online_simulated'>('local');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const availableSlots = [
     '09:00', '09:45', '10:30', '11:15', '13:00',
@@ -105,32 +106,35 @@ export const PublicVitrine: React.FC = () => {
     const endH = Math.floor(totalMin / 60);
     const endM = totalMin % 60;
 
-    const newAppointment = storageEngine.createAppointment({
-      tenant_id: currentTenant.id,
-      service_id: selectedService.id,
-      staff_id: selectedStaff.id,
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      date: selectedDate,
-      start_time: selectedSlot,
-      end_time: `${endH}:${String(endM).padStart(2, '0')}`,
-      price: selectedService.price,
-      status: 'confirmed',
-      payment_method: paymentMethod,
-    });
+    try {
+      const newAppointment = storageEngine.createAppointment({
+        tenant_id: currentTenant.id,
+        service_id: selectedService.id,
+        staff_id: selectedStaff.id,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        date: selectedDate,
+        start_time: selectedSlot,
+        end_time: `${endH}:${String(endM).padStart(2, '0')}`,
+        price: selectedService.price,
+        status: 'confirmed',
+        payment_method: paymentMethod,
+      });
 
-    // Notify other components (Owner schedule, etc) in real time
-    window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
+      window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
 
-    setIsSuccess(true);
-    setAppointments(storageEngine.getAppointments(currentTenant.id));
+      setIsSuccess(true);
+      setAppointments(storageEngine.getAppointments(currentTenant.id));
 
-    setTimeout(() => {
-      setIsBookingModalOpen(false);
-      setIsSuccess(false);
-      setCustomerName('');
-      setCustomerPhone('');
-    }, 2000);
+      setTimeout(() => {
+        setIsBookingModalOpen(false);
+        setIsSuccess(false);
+        setCustomerName('');
+        setCustomerPhone('');
+      }, 2000);
+    } catch (err: any) {
+      setFormError(err.message || 'Erro ao agendar.');
+    }
   };
 
   const handleCancelAppointment = async (id: string) => {
@@ -500,6 +504,12 @@ export const PublicVitrine: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold text-white mb-1">Agendar Horário Online</h3>
                 <p className="text-xs text-slate-400 mb-4">Selecione o serviço, data e insira seus dados.</p>
+
+                {formError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold rounded-lg mb-3">
+                    {formError}
+                  </div>
+                )}
 
                 <form onSubmit={handleConfirmBooking} className="space-y-4">
                   <div>
