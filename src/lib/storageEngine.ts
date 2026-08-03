@@ -396,7 +396,7 @@ export const storageEngine = {
 
     const updated = tenants.find((t) => t.id === id);
     if (updated) {
-      supabaseEngine.upsertTenant(updated);
+      supabaseEngine.upsertTenant(updated).catch(() => {});
     }
     return tenants;
   },
@@ -488,9 +488,9 @@ export const storageEngine = {
     setItem(STORAGE_KEYS.SERVICES, services);
 
     // Save to Supabase
-    supabaseEngine.upsertTenant(newTenant);
-    supabaseEngine.upsertUser(newOwner);
-    supabaseEngine.upsertService(defaultService);
+    supabaseEngine.upsertTenant(newTenant).catch(() => {});
+    supabaseEngine.upsertUser(newOwner).catch(() => {});
+    supabaseEngine.upsertService(defaultService).catch(() => {});
 
     return { tenant: newTenant, owner: newOwner };
   },
@@ -564,9 +564,9 @@ export const storageEngine = {
     setItem(STORAGE_KEYS.INVITATION_CODES, invitations);
 
     // Save to Supabase
-    supabaseEngine.upsertTenant(newTenant);
-    supabaseEngine.upsertUser(newOwner);
-    supabaseEngine.upsertInvitationCode(invite);
+    supabaseEngine.upsertTenant(newTenant).catch(() => {});
+    supabaseEngine.upsertUser(newOwner).catch(() => {});
+    supabaseEngine.upsertInvitationCode(invite).catch(() => {});
 
     return { tenant: newTenant, owner: newOwner };
   },
@@ -592,7 +592,7 @@ export const storageEngine = {
     invitations.unshift(newCode);
     setItem(STORAGE_KEYS.INVITATION_CODES, invitations);
 
-    supabaseEngine.upsertInvitationCode(newCode);
+    supabaseEngine.upsertInvitationCode(newCode).catch(() => {});
     return newCode;
   },
 
@@ -649,7 +649,7 @@ export const storageEngine = {
     users[idx] = updatedUser;
     setItem(STORAGE_KEYS.USERS, users);
 
-    supabaseEngine.upsertUser(updatedUser);
+    supabaseEngine.upsertUser(updatedUser).catch(() => {});
 
     // If staff user, update StaffMember record as well
     if (updatedUser.role === 'staff' || updatedUser.role === 'owner') {
@@ -666,7 +666,7 @@ export const storageEngine = {
           ...(updates.bio ? { bio: updates.bio } : {}),
         };
         setItem(STORAGE_KEYS.STAFF, staffList);
-        supabaseEngine.upsertStaff(staffList[staffIdx]);
+        supabaseEngine.upsertStaff(staffList[staffIdx]).catch(() => {});
       }
     }
 
@@ -684,7 +684,7 @@ export const storageEngine = {
     tenants[idx] = updatedTenant;
     setItem(STORAGE_KEYS.TENANTS, tenants);
 
-    supabaseEngine.upsertTenant(updatedTenant);
+    supabaseEngine.upsertTenant(updatedTenant).catch(() => {});
     return updatedTenant;
   },
 
@@ -709,14 +709,14 @@ export const storageEngine = {
     }
     setItem(STORAGE_KEYS.SERVICES, services);
 
-    supabaseEngine.upsertService(updated);
+    supabaseEngine.upsertService(updated).catch(() => {});
     return updated;
   },
   deleteService(id: string): void {
     const services = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
     setItem(STORAGE_KEYS.SERVICES, services.filter((s) => s.id !== id));
 
-    supabaseEngine.deleteService(id);
+    supabaseEngine.deleteService(id).catch(() => {});
   },
 
   // STAFF
@@ -773,8 +773,8 @@ export const storageEngine = {
     }
     setItem(STORAGE_KEYS.USERS, users);
 
-    supabaseEngine.upsertStaff(updated);
-    supabaseEngine.upsertUser(correspondingUser);
+    supabaseEngine.upsertStaff(updated).catch(() => {});
+    supabaseEngine.upsertUser(correspondingUser).catch(() => {});
 
     return updated;
   },
@@ -784,7 +784,7 @@ export const storageEngine = {
     if (target) {
       // Remove staff record
       setItem(STORAGE_KEYS.STAFF, staff.filter((s) => s.id !== id));
-      supabaseEngine.deleteStaff(id);
+      supabaseEngine.deleteStaff(id).catch(() => {});
       
       // Optionally remove corresponding staff user
       const users = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
@@ -794,7 +794,7 @@ export const storageEngine = {
           STORAGE_KEYS.USERS,
           users.filter((u) => u.email.toLowerCase() !== target.email.toLowerCase())
         );
-        supabaseEngine.deleteUser(targetUser.id);
+        supabaseEngine.deleteUser(targetUser.id).catch(() => {});
       }
     }
   },
@@ -817,7 +817,7 @@ export const storageEngine = {
     appointments.unshift(newApt);
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments);
 
-    supabaseEngine.upsertAppointment(newApt);
+    supabaseEngine.upsertAppointment(newApt).catch(() => {});
     return newApt;
   },
   updateAppointmentStatus(id: string, status: 'confirmed' | 'completed' | 'cancelled'): void {
@@ -827,7 +827,7 @@ export const storageEngine = {
 
     const target = updated.find((a) => a.id === id);
     if (target) {
-      supabaseEngine.upsertAppointment(target);
+      supabaseEngine.upsertAppointment(target).catch(() => {});
     }
   },
   updateAppointment(id: string, updates: Partial<Appointment>): Appointment {
@@ -840,14 +840,14 @@ export const storageEngine = {
     appointments[idx] = updated;
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments);
 
-    supabaseEngine.upsertAppointment(updated);
+    supabaseEngine.upsertAppointment(updated).catch(() => {});
     return updated;
   },
   deleteAppointment(id: string): void {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments.filter((a) => a.id !== id));
 
-    supabaseEngine.deleteAppointment(id);
+    supabaseEngine.deleteAppointment(id).catch(() => {});
   },
 
   // BUSINESS HOURS

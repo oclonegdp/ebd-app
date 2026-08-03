@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Scissors, Calendar, Clock, MapPin, MessageSquare, CheckCircle2, User, X, Copy, Check, Link as LinkIcon, Store, Search, Filter, AlertCircle, Crown } from 'lucide-react';
 import { storageEngine } from '../../lib/storageEngine';
-import { supabaseEngine } from '../../lib/supabaseEngine';
 import { getStorePublicUrl } from '../../lib/urlUtils';
 import { Service, StaffMember, Appointment } from '../../types';
 import { BannerSkeleton, CardSkeleton, ListSkeleton } from '../UI/LoadingSkeleton';
@@ -100,6 +99,12 @@ export const PublicVitrine: React.FC = () => {
     e.preventDefault();
     if (!currentTenant || !selectedService || !selectedStaff) return;
 
+    const startHour = parseInt(selectedSlot.split(':')[0]);
+    const startMin = parseInt(selectedSlot.split(':')[1] || '0');
+    const totalMin = startHour * 60 + startMin + selectedService.duration_minutes;
+    const endH = Math.floor(totalMin / 60);
+    const endM = totalMin % 60;
+
     const newAppointment = storageEngine.createAppointment({
       tenant_id: currentTenant.id,
       service_id: selectedService.id,
@@ -108,14 +113,11 @@ export const PublicVitrine: React.FC = () => {
       customer_phone: customerPhone,
       date: selectedDate,
       start_time: selectedSlot,
-      end_time: `${parseInt(selectedSlot.split(':')[0]) + 1}:00`,
+      end_time: `${endH}:${String(endM).padStart(2, '0')}`,
       price: selectedService.price,
       status: 'confirmed',
       payment_method: paymentMethod,
     });
-
-    // Directly guarantee write to Supabase table
-    await supabaseEngine.upsertAppointment(newAppointment);
 
     // Notify other components (Owner schedule, etc) in real time
     window.dispatchEvent(new CustomEvent('ebd_storage_synced'));

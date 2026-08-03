@@ -55,7 +55,25 @@ const migrations = [
     active BOOLEAN DEFAULT true
   )`,
 
-  // 8. RLS policies - enable and allow anon full access
+  // 8. Create appointments
+  `CREATE TABLE IF NOT EXISTS public.appointments (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    service_id TEXT NOT NULL,
+    staff_id TEXT NOT NULL,
+    customer_name TEXT NOT NULL,
+    customer_email TEXT,
+    customer_phone TEXT NOT NULL,
+    date TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    price NUMERIC NOT NULL,
+    status TEXT DEFAULT 'confirmed',
+    payment_method TEXT DEFAULT 'local',
+    created_at TEXT DEFAULT (now() AT TIME ZONE 'utc')::text
+  )`,
+
+  // 9. RLS policies - enable and allow anon full access
   `ALTER TABLE public.tenants ENABLE ROW LEVEL SECURITY`,
   `DROP POLICY IF EXISTS "anon_all_tenants" ON public.tenants`,
   `CREATE POLICY "anon_all_tenants" ON public.tenants FOR ALL USING (true) WITH CHECK (true)`,
