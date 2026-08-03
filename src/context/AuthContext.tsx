@@ -7,6 +7,7 @@ interface AuthContextType {
   currentUser: User | null;
   currentTenant: Tenant | null;
   allTenants: Tenant[];
+  loading: boolean;
   viewMode: 'admin' | 'client';
   isIsolatedVitrine: boolean;
   urlSlugError: string | null;
@@ -41,10 +42,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    // Default to Super Admin on fresh session for quick inspection or client
-    return storageEngine.loginByEmail('superadmin@ebd.com') || null;
-  });
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [allTenants, setAllTenants] = useState<Tenant[]>(() => storageEngine.getTenants());
 
@@ -74,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setViewMode('client');
         }
       }
+      setLoading(false);
     };
 
     handleUrlSlugCheck();
@@ -180,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         currentTenant,
         allTenants,
+        loading,
         viewMode,
         isIsolatedVitrine,
         urlSlugError,

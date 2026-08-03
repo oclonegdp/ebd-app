@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginModal } from './components/Auth/LoginModal';
+import { RegisterTenantModal } from './components/Auth/RegisterTenantModal';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { PublicVitrine } from './components/Customer/PublicVitrine';
@@ -10,11 +12,11 @@ import { ServicesManager } from './components/Owner/ServicesManager';
 import { StaffManager } from './components/Owner/StaffManager';
 import { BusinessHoursManager } from './components/Owner/BusinessHoursManager';
 import { StaffDashboard } from './components/Staff/StaffDashboard';
-import { AccessDeniedScreen } from './components/RBAC/AccessDeniedScreen';
 
 const MainAppContent: React.FC = () => {
-  const { currentUser, viewMode } = useAuth();
+  const { currentUser, loading, viewMode, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (currentUser?.role === 'super_admin') return 'superadmin_dashboard';
     if (currentUser?.role === 'staff') return 'staff_dashboard';
@@ -31,7 +33,28 @@ const MainAppContent: React.FC = () => {
     }
   }, [currentUser?.id, currentUser?.role]);
 
-  // Client view
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0F1115] text-white">
+        <p className="text-sm font-mono tracking-wider animate-pulse">CARREGANDO SISTEMA...</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="relative h-screen w-screen bg-[#0F1115] flex items-center justify-center overflow-hidden">
+        <LoginModal
+          onClose={() => {}}
+          onOpenRegister={() => setShowRegister(true)}
+        />
+        {showRegister && (
+          <RegisterTenantModal onClose={() => setShowRegister(false)} />
+        )}
+      </div>
+    );
+  }
+
   if (viewMode === 'client') {
     return (
       <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
@@ -43,19 +66,6 @@ const MainAppContent: React.FC = () => {
     );
   }
 
-  // Admin view without authorization
-  if (!currentUser || currentUser.role === 'customer') {
-    return (
-      <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
-        <Header />
-        <main className="flex-1">
-          <AccessDeniedScreen />
-        </main>
-      </div>
-    );
-  }
-
-  // Render Admin View
   return (
     <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
       <Header
