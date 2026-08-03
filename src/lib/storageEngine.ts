@@ -822,8 +822,9 @@ export const storageEngine = {
     }
     return appointments;
   },
-  hasScheduleConflict(staffId: string, date: string, startTime: string, endTime: string, excludeId?: string): boolean {
-    const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+  hasScheduleConflict(staffId: string, date: string, startTime: string, endTime: string, tenantId?: string, excludeId?: string): boolean {
+    const all = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+    const appointments = tenantId ? all.filter((a) => a.tenant_id === tenantId) : all;
     return appointments.some((a) => {
       if (a.id === excludeId) return false;
       if (a.staff_id !== staffId || a.date !== date) return false;
@@ -834,7 +835,7 @@ export const storageEngine = {
   createAppointment(apt: Omit<Appointment, 'id' | 'created_at'>): Appointment {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
 
-    if (this.hasScheduleConflict(apt.staff_id, apt.date, apt.start_time, apt.end_time)) {
+    if (this.hasScheduleConflict(apt.staff_id, apt.date, apt.start_time, apt.end_time, apt.tenant_id)) {
       throw new Error('Conflito de horário: este profissional já possui agendamento neste horário.');
     }
 
