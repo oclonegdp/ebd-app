@@ -100,6 +100,8 @@ export const PublicVitrine: React.FC = () => {
     e.preventDefault();
     if (!currentTenant || !selectedService || !selectedStaff) return;
 
+    console.log('[EBD BOOKING] currentTenant.id:', currentTenant.id, 'currentTenant.name:', currentTenant.name, 'selectedStaff.id:', selectedStaff.id, 'selectedStaff.name:', selectedStaff.name);
+
     const startHour = parseInt(selectedSlot.split(':')[0]);
     const startMin = parseInt(selectedSlot.split(':')[1] || '0');
     const totalMin = startHour * 60 + startMin + selectedService.duration_minutes;
