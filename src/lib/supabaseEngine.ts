@@ -29,47 +29,42 @@ export const supabaseEngine = {
     try {
       // 1. Tenants
       const { data: tenantsData, error: tenantsError } = await supabase.from('tenants').select('*');
-      if (!tenantsError && tenantsData) {
-        result.tenants = tenantsData as Tenant[];
-      }
+      if (tenantsError) console.error('[EBD] sync tenants ERROR:', tenantsError.message);
+      else if (tenantsData) result.tenants = tenantsData as Tenant[];
 
       // 2. Users
       const { data: usersData, error: usersError } = await supabase.from('users').select('*');
-      if (!usersError && usersData) {
-        result.users = usersData as User[];
-      }
+      if (usersError) console.error('[EBD] sync users ERROR:', usersError.message);
+      else if (usersData) result.users = usersData as User[];
 
       // 3. Services
       const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
-      if (!servicesError && servicesData) {
-        result.services = servicesData as Service[];
-      }
+      if (servicesError) console.error('[EBD] sync services ERROR:', servicesError.message);
+      else if (servicesData) result.services = servicesData as Service[];
 
       // 4. Staff
       const { data: staffData, error: staffError } = await supabase.from('staff').select('*');
-      if (!staffError && staffData) {
-        result.staff = staffData as StaffMember[];
-      }
+      if (staffError) console.error('[EBD] sync staff ERROR:', staffError.message);
+      else if (staffData) result.staff = staffData as StaffMember[];
 
       // 5. Appointments
       const { data: aptData, error: aptError } = await supabase.from('appointments').select('*');
-      if (!aptError && aptData) {
-        result.appointments = aptData as Appointment[];
-      }
+      if (aptError) console.error('[EBD] sync appointments ERROR:', aptError.message);
+      else if (aptData) result.appointments = aptData as Appointment[];
 
       // 6. Business Hours
       const { data: bhData, error: bhError } = await supabase.from('business_hours').select('*');
-      if (!bhError && bhData) {
-        result.businessHours = bhData as BusinessHours[];
-      }
+      if (bhError) console.error('[EBD] sync business_hours ERROR:', bhError.message);
+      else if (bhData) result.businessHours = bhData as BusinessHours[];
 
       // 7. Invitations
       const { data: invData, error: invError } = await supabase.from('invitation_codes').select('*');
-      if (!invError && invData) {
-        result.invitations = invData as InvitationCode[];
-      }
+      if (invError) console.error('[EBD] sync invitation_codes ERROR:', invError.message);
+      else if (invData) result.invitations = invData as InvitationCode[];
+
+      console.log('[EBD] syncAllFromSupabase done:', Object.keys(result).length, 'tables fetched');
     } catch (err) {
-      console.warn('Erro ao sincronizar dados do Supabase:', err);
+      console.error('[EBD] syncAllFromSupabase FATAL:', err);
     }
 
     return result;
@@ -94,102 +89,123 @@ export const supabaseEngine = {
   // WRITE OPERATIONS TO SUPABASE
 
   async upsertTenant(tenant: Tenant): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] upsertTenant skipped: no Supabase client'); return; }
     try {
-      const { error } = await supabase.from('tenants').upsert([tenant]);
-      if (error) console.warn('Supabase upsertTenant error:', error.message);
+      const { data, error } = await supabase.from('tenants').upsert([tenant]).select();
+      if (error) console.error('[EBD] upsertTenant ERROR:', error.message, error.details);
+      else console.log('[EBD] upsertTenant OK:', tenant.id);
     } catch (e) {
-      console.warn('Supabase upsertTenant exception:', e);
+      console.error('[EBD] upsertTenant EXCEPTION:', e);
     }
   },
 
   async upsertUser(user: User): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] upsertUser skipped: no Supabase client'); return; }
     try {
-      const { error } = await supabase.from('users').upsert([user]);
-      if (error) console.warn('Supabase upsertUser error:', error.message);
+      const { data, error } = await supabase.from('users').upsert([user]).select();
+      if (error) console.error('[EBD] upsertUser ERROR:', error.message, error.details);
+      else console.log('[EBD] upsertUser OK:', user.id);
     } catch (e) {
-      console.warn('Supabase upsertUser exception:', e);
+      console.error('[EBD] upsertUser EXCEPTION:', e);
     }
   },
 
   async upsertService(service: Service): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] upsertService skipped: no Supabase client'); return; }
     try {
-      const { error } = await supabase.from('services').upsert([service]);
-      if (error) console.warn('Supabase upsertService error:', error.message);
+      const { data, error } = await supabase.from('services').upsert([service]).select();
+      if (error) console.error('[EBD] upsertService ERROR:', error.message, error.details);
+      else console.log('[EBD] upsertService OK:', service.id);
     } catch (e) {
-      console.warn('Supabase upsertService exception:', e);
+      console.error('[EBD] upsertService EXCEPTION:', e);
     }
   },
 
   async deleteService(id: string): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] deleteService skipped: no Supabase client'); return; }
     try {
       const { error } = await supabase.from('services').delete().eq('id', id);
-      if (error) console.warn('Supabase deleteService error:', error.message);
+      if (error) console.error('[EBD] deleteService ERROR:', error.message, error.details);
+      else console.log('[EBD] deleteService OK:', id);
     } catch (e) {
-      console.warn('Supabase deleteService exception:', e);
+      console.error('[EBD] deleteService EXCEPTION:', e);
     }
   },
 
   async upsertStaff(staffMember: StaffMember): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] upsertStaff skipped: no Supabase client'); return; }
     try {
-      const { error } = await supabase.from('staff').upsert([staffMember]);
-      if (error) console.warn('Supabase upsertStaff error:', error.message);
+      const { data, error } = await supabase.from('staff').upsert([staffMember]).select();
+      if (error) console.error('[EBD] upsertStaff ERROR:', error.message, error.details);
+      else console.log('[EBD] upsertStaff OK:', staffMember.id);
     } catch (e) {
-      console.warn('Supabase upsertStaff exception:', e);
+      console.error('[EBD] upsertStaff EXCEPTION:', e);
     }
   },
 
   async deleteStaff(id: string): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] deleteStaff skipped: no Supabase client'); return; }
     try {
       const { error } = await supabase.from('staff').delete().eq('id', id);
-      if (error) console.warn('Supabase deleteStaff error:', error.message);
+      if (error) console.error('[EBD] deleteStaff ERROR:', error.message, error.details);
+      else console.log('[EBD] deleteStaff OK:', id);
     } catch (e) {
-      console.warn('Supabase deleteStaff exception:', e);
+      console.error('[EBD] deleteStaff EXCEPTION:', e);
     }
   },
 
   async upsertAppointment(appointment: Appointment): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] upsertAppointment skipped: no Supabase client'); return; }
     try {
-      const { error } = await supabase.from('appointments').upsert([appointment]);
-      if (error) console.warn('Supabase upsertAppointment error:', error.message);
+      const { data, error } = await supabase.from('appointments').upsert([appointment]).select();
+      if (error) console.error('[EBD] upsertAppointment ERROR:', error.message, error.details);
+      else console.log('[EBD] upsertAppointment OK:', appointment.id);
     } catch (e) {
-      console.warn('Supabase upsertAppointment exception:', e);
+      console.error('[EBD] upsertAppointment EXCEPTION:', e);
     }
   },
 
   async deleteAppointment(id: string): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] deleteAppointment skipped: no Supabase client'); return; }
     try {
       const { error } = await supabase.from('appointments').delete().eq('id', id);
-      if (error) console.warn('Supabase deleteAppointment error:', error.message);
+      if (error) console.error('[EBD] deleteAppointment ERROR:', error.message, error.details);
+      else console.log('[EBD] deleteAppointment OK:', id);
     } catch (e) {
-      console.warn('Supabase deleteAppointment exception:', e);
+      console.error('[EBD] deleteAppointment EXCEPTION:', e);
     }
   },
 
   async saveBusinessHours(hours: BusinessHours[]): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] saveBusinessHours skipped: no Supabase client'); return; }
     try {
-      const { error } = await supabase.from('business_hours').upsert(hours);
-      if (error) console.warn('Supabase saveBusinessHours error:', error.message);
+      // Map camelCase → snake_case for DB columns
+      const mapped = hours.map((h) => ({
+        day_num: h.dayNum,
+        day: h.day,
+        is_open: h.isOpen,
+        start_time: h.startTime,
+        end_time: h.endTime,
+        break_start: h.breakStart,
+        break_end: h.breakEnd,
+        tenant_id: (h as any).tenant_id || null,
+      }));
+      const { error } = await supabase.from('business_hours').upsert(mapped);
+      if (error) console.error('[EBD] saveBusinessHours ERROR:', error.message, error.details);
+      else console.log('[EBD] saveBusinessHours OK');
     } catch (e) {
-      console.warn('Supabase saveBusinessHours exception:', e);
+      console.error('[EBD] saveBusinessHours EXCEPTION:', e);
     }
   },
 
   async upsertInvitationCode(invitation: InvitationCode): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) { console.warn('[EBD] upsertInvitationCode skipped: no Supabase client'); return; }
     try {
-      const { error } = await supabase.from('invitation_codes').upsert([invitation]);
-      if (error) console.warn('Supabase upsertInvitationCode error:', error.message);
+      const { data, error } = await supabase.from('invitation_codes').upsert([invitation]).select();
+      if (error) console.error('[EBD] upsertInvitationCode ERROR:', error.message, error.details);
+      else console.log('[EBD] upsertInvitationCode OK:', invitation.id);
     } catch (e) {
-      console.warn('Supabase upsertInvitationCode exception:', e);
+      console.error('[EBD] upsertInvitationCode EXCEPTION:', e);
     }
   },
 

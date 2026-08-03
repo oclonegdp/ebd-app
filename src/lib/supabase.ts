@@ -5,12 +5,15 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export let supabase: SupabaseClient | null = null;
 
-if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://your-supabase-project.supabase.co') {
+if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://your-supabase-project.supabase.co' && supabaseAnonKey !== 'sua_chave_anon_aqui') {
   try {
     supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('[EBD] Supabase client initialized OK:', supabaseUrl);
   } catch (err) {
-    console.warn('Supabase initialization warning:', err);
+    console.warn('[EBD] Supabase initialization error:', err);
   }
+} else {
+  console.warn('[EBD] Supabase DISABLED — check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env');
 }
 
 /**
