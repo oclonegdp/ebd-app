@@ -434,7 +434,7 @@ export const PublicVitrine: React.FC = () => {
                       className="p-4 bg-slate-800/30 border border-slate-800 rounded-lg space-y-2 shadow-sm"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">{apt.service_id || 'Corte & Estilo'}</span>
+                        <span className="text-xs font-bold text-white">{services.find((s) => s.id === apt.service_id)?.name || 'Serviço'}</span>
                         <span className="text-xs font-bold text-yellow-500 font-mono">R$ {apt.price ? apt.price.toFixed(2) : '0.00'}</span>
                       </div>
 
@@ -449,6 +449,8 @@ export const PublicVitrine: React.FC = () => {
                           className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${
                             apt.status === 'confirmed'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : apt.status === 'completed'
+                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                               : 'bg-red-500/10 text-red-400 border border-red-500/20'
                           }`}
                         >

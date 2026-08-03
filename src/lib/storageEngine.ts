@@ -688,6 +688,21 @@ export const storageEngine = {
     return updatedTenant;
   },
 
+  deleteTenant(tenantId: string): void {
+    const tenants = this.getTenants();
+    setItem(STORAGE_KEYS.TENANTS, tenants.filter((t) => t.id !== tenantId));
+    supabaseEngine.deleteTenant(tenantId).catch(() => {});
+
+    const users = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
+    setItem(STORAGE_KEYS.USERS, users.filter((u) => u.tenant_id !== tenantId));
+
+    const services = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
+    setItem(STORAGE_KEYS.SERVICES, services.filter((s) => s.tenant_id !== tenantId));
+
+    const staff = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
+    setItem(STORAGE_KEYS.STAFF, staff.filter((s) => s.tenant_id !== tenantId));
+  },
+
   // SERVICES
   getServices(tenantId?: string): Service[] {
     const services = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);

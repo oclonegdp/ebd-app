@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, Plus, Key, Copy, Check, Building2, Users, Calendar, AlertTriangle, RefreshCw, Link as LinkIcon, MessageSquare, Lock, Award, Clock, Edit3 } from 'lucide-react';
+import { ShieldCheck, Plus, Key, Copy, Check, Building2, Users, Calendar, AlertTriangle, RefreshCw, Link as LinkIcon, MessageSquare, Lock, Award, Clock, Edit3, Trash2 } from 'lucide-react';
 import { storageEngine } from '../../lib/storageEngine';
 import { getStorePublicUrl, getWhatsAppShareUrl } from '../../lib/urlUtils';
 import { Tenant, InvitationCode } from '../../types';
@@ -20,6 +20,18 @@ export const SuperAdminDashboard: React.FC = () => {
 
   // Direct Creation Form State
   const [isDirectModalOpen, setIsDirectModalOpen] = useState(false);
+
+  // Edit Tenant State
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editSlug, setEditSlug] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+
+  // Delete Confirm State
+  const [deletingTenantId, setDeletingTenantId] = useState<string | null>(null);
+
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [ownerName, setOwnerName] = useState('');
@@ -91,6 +103,36 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const handleToggleStatus = (id: string) => {
     storageEngine.toggleTenantStatus(id);
+    loadDashboardData();
+    refreshData();
+  };
+
+  const handleEditTenant = (tenant: Tenant) => {
+    setEditingTenant(tenant);
+    setEditName(tenant.name);
+    setEditSlug(tenant.slug);
+    setEditDescription(tenant.description || '');
+    setEditAddress(tenant.address || '');
+    setEditPhone(tenant.phone || '');
+  };
+
+  const handleSaveEditTenant = () => {
+    if (!editingTenant) return;
+    storageEngine.updateTenant(editingTenant.id, {
+      name: editName,
+      slug: editSlug,
+      description: editDescription,
+      address: editAddress,
+      phone: editPhone,
+    });
+    setEditingTenant(null);
+    loadDashboardData();
+    refreshData();
+  };
+
+  const handleDeleteTenant = (id: string) => {
+    storageEngine.deleteTenant(id);
+    setDeletingTenantId(null);
     loadDashboardData();
     refreshData();
   };
@@ -262,6 +304,35 @@ export const SuperAdminDashboard: React.FC = () => {
 
                     <div className="flex items-center space-x-2">
                       <button
+                        onClick={() => handleEditTenant(tenant)}
+                        className="px-2.5 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer active:scale-95"
+                        title="Editar Loja"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (deletingTenantId === tenant.id) {
+                            handleDeleteTenant(tenant.id);
+                          } else {
+                            setDeletingTenantId(tenant.id);
+                            setTimeout(() => setDeletingTenantId(null), 3000);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 border ${
+                          deletingTenantId === tenant.id
+                            ? 'bg-red-500 text-white border-red-500'
+                            : 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30'
+                        }`}
+                        title={deletingTenantId === tenant.id ? 'Clique novamente para confirmar' : 'Excluir Loja'}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>{deletingTenantId === tenant.id ? 'Confirmar?' : 'Excluir'}</span>
+                      </button>
+
+                      <button
                         onClick={() => {
                           setSelectedTenantForLicense(tenant);
                           setIsLicenseModalOpen(true);
@@ -269,7 +340,7 @@ export const SuperAdminDashboard: React.FC = () => {
                         className="px-2.5 py-1 rounded bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer active:scale-95"
                       >
                         <Award className="w-3 h-3" />
-                        <span>Gerenciar Licença</span>
+                        <span>Licença</span>
                       </button>
 
                       <button
@@ -531,6 +602,81 @@ export const SuperAdminDashboard: React.FC = () => {
         onClose={() => setIsLicenseModalOpen(false)}
         onUpdated={loadDashboardData}
       />
+
+      {/* EDIT TENANT MODAL */}
+      {editingTenant && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#16191F] border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative space-y-4">
+            <div className="flex items-center space-x-2 text-blue-400">
+              <Edit3 className="w-5 h-5" />
+              <h2 className="text-base font-bold text-white">Editar Loja</h2>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Nome da Loja</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Slug / URL</label>
+                <input
+                  type="text"
+                  value={editSlug}
+                  onChange={(e) => setEditSlug(e.target.value)}
+                  className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Descrição</label>
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Endereço</label>
+                <input
+                  type="text"
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Telefone</label>
+                <input
+                  type="text"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 flex justify-end space-x-2">
+              <button
+                onClick={() => setEditingTenant(null)}
+                className="px-4 py-2 rounded-lg bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEditTenant}
+                className="px-5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white shadow-md"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
