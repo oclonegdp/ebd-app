@@ -11,7 +11,6 @@ import { StaffManager } from './components/Owner/StaffManager';
 import { BusinessHoursManager } from './components/Owner/BusinessHoursManager';
 import { StaffDashboard } from './components/Staff/StaffDashboard';
 import { AccessDeniedScreen } from './components/RBAC/AccessDeniedScreen';
-import { SupabaseStatusBanner } from './components/SupabaseStatusBanner';
 
 const MainAppContent: React.FC = () => {
   const { currentUser, viewMode } = useAuth();
@@ -35,38 +34,30 @@ const MainAppContent: React.FC = () => {
   // Client view
   if (viewMode === 'client') {
     return (
-      <>
-        <SupabaseStatusBanner />
-        <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
-          <Header />
-          <main className="flex-1">
-            <PublicVitrine />
-          </main>
-        </div>
-      </>
+      <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <PublicVitrine />
+        </main>
+      </div>
     );
   }
 
   // Admin view without authorization
   if (!currentUser || currentUser.role === 'customer') {
     return (
-      <>
-        <SupabaseStatusBanner />
-        <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
-          <Header />
-          <main className="flex-1">
-            <AccessDeniedScreen />
-          </main>
-        </div>
-      </>
+      <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <AccessDeniedScreen />
+        </main>
+      </div>
     );
   }
 
   // Render Admin View
   return (
-    <>
-      <SupabaseStatusBanner />
-      <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
       <Header
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
@@ -88,8 +79,7 @@ const MainAppContent: React.FC = () => {
           {activeTab === 'staff_dashboard' && <StaffDashboard />}
         </main>
       </div>
-      </div>
-    </>
+    </div>
   );
 };
 
