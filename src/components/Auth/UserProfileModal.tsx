@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User as UserIcon, Check, Phone, FileText, Building, ShieldCheck } from 'lucide-react';
+import { X, User as UserIcon, Check, Phone, FileText, Building, ShieldCheck, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { storageEngine } from '../../lib/storageEngine';
 import { ImageUploader } from '../UI/ImageUploader';
@@ -14,6 +14,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [successMsg, setSuccessMsg] = useState(false);
@@ -23,6 +24,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
     if (currentUser) {
       setFullName(currentUser.full_name || '');
       setPhone(currentUser.phone || '');
+      setPassword(currentUser.password || '');
       setAvatarUrl(currentUser.avatar_url || '');
 
       // Load staff bio if user is staff or owner
@@ -52,6 +54,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
       updateProfile({
         full_name: fullName.trim(),
         phone: phone.trim(),
+        password: password.trim() || undefined,
         avatar_url: avatarUrl.trim(),
         bio: bio.trim(),
       });
@@ -155,6 +158,22 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
               className="w-full bg-[#0F1115] border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-yellow-500"
               placeholder="(11) 99999-8888"
             />
+          </div>
+
+          {/* Password Input */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-yellow-500" />
+              <span>Sua Senha de Acesso Secreta</span>
+            </label>
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-[#0F1115] border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-yellow-400 font-mono font-bold placeholder-slate-500 focus:outline-none focus:border-yellow-500"
+              placeholder="Digite sua nova senha de acesso privada"
+            />
+            <p className="text-[10px] text-slate-500">Altere para a sua senha pessoal e secreta de preferência.</p>
           </div>
 
           {/* Bio Input (For staff/owners) */}

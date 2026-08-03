@@ -12,9 +12,10 @@ import { ServicesManager } from './components/Owner/ServicesManager';
 import { StaffManager } from './components/Owner/StaffManager';
 import { BusinessHoursManager } from './components/Owner/BusinessHoursManager';
 import { StaffDashboard } from './components/Staff/StaffDashboard';
+import { AccessDeniedScreen } from './components/RBAC/AccessDeniedScreen';
 
 const MainAppContent: React.FC = () => {
-  const { currentUser, loading, viewMode, logout } = useAuth();
+  const { currentUser, viewMode } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -33,14 +34,7 @@ const MainAppContent: React.FC = () => {
     }
   }, [currentUser?.id, currentUser?.role]);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#0F1115] text-white">
-        <p className="text-sm font-mono tracking-wider animate-pulse">CARREGANDO SISTEMA...</p>
-      </div>
-    );
-  }
-
+  // Not logged in — show login modal
   if (!currentUser) {
     return (
       <div className="relative h-screen w-screen bg-[#0F1115] flex items-center justify-center overflow-hidden">
@@ -55,6 +49,7 @@ const MainAppContent: React.FC = () => {
     );
   }
 
+  // Client view
   if (viewMode === 'client') {
     return (
       <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
@@ -66,6 +61,19 @@ const MainAppContent: React.FC = () => {
     );
   }
 
+  // Admin view without authorization
+  if (currentUser.role === 'customer') {
+    return (
+      <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <AccessDeniedScreen />
+        </main>
+      </div>
+    );
+  }
+
+  // Render Admin View
   return (
     <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
       <Header

@@ -7,13 +7,12 @@ interface AuthContextType {
   currentUser: User | null;
   currentTenant: Tenant | null;
   allTenants: Tenant[];
-  loading: boolean;
   viewMode: 'admin' | 'client';
   isIsolatedVitrine: boolean;
   urlSlugError: string | null;
   setViewMode: (mode: 'admin' | 'client') => void;
   switchTenant: (tenantId: string) => void;
-  login: (email: string) => boolean;
+  login: (email: string, password?: string) => boolean;
   logout: () => void;
   registerTenantWithInvite: (data: {
     invitationCode: string;
@@ -42,8 +41,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    return storageEngine.getCurrentUserFromSession();
+  });
 
   const [allTenants, setAllTenants] = useState<Tenant[]>(() => storageEngine.getTenants());
 
@@ -52,7 +52,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return storageEngine.getTenantById(activeId) || allTenants[0] || null;
   });
 
-  const [viewMode, setViewMode] = useState<'admin' | 'client'>('admin');
+  const [viewMode, setViewMode] = useState<'admin' | 'client'>(() => {
+    const sessionUser = storageEngine.getCurrentUserFromSession();
+    return sessionUser && sessionUser.role !== 'customer' ? 'admin' : 'client';
+  });
   const [isIsolatedVitrine, setIsIsolatedVitrine] = useState(false);
   const [urlSlugError, setUrlSlugError] = useState<string | null>(null);
 
@@ -73,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setViewMode('client');
         }
       }
-      setLoading(false);
     };
 
     handleUrlSlugCheck();
@@ -104,8 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = (email: string): boolean => {
-    const user = storageEngine.loginByEmail(email);
+  const login = (email: string, password?: string): boolean => {
+    const user = storageEngine.authenticateUser(email, password);
     if (user) {
       setCurrentUser(user);
       if (user.tenant_id) {
@@ -122,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    storageEngine.logoutSession();
     setCurrentUser(null);
     setViewMode('client');
   };
@@ -180,7 +183,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         currentTenant,
         allTenants,
-        loading,
         viewMode,
         isIsolatedVitrine,
         urlSlugError,

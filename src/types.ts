@@ -3,6 +3,7 @@ export type UserRole = 'super_admin' | 'owner' | 'staff' | 'customer';
 export interface User {
   id: string;
   email: string;
+  password?: string;
   full_name: string;
   role: UserRole;
   tenant_id?: string;

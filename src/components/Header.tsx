@@ -4,6 +4,8 @@ import { Store, LogIn, LogOut, Building2, Menu, User, Settings } from 'lucide-re
 import { LoginModal } from './Auth/LoginModal';
 import { RegisterTenantModal } from './Auth/RegisterTenantModal';
 import { UserProfileModal } from './Auth/UserProfileModal';
+import { storageEngine } from '../lib/storageEngine';
+import { getSlugFromURL } from '../lib/urlUtils';
 
 interface HeaderProps {
   isMobileMenuOpen?: boolean;
@@ -12,7 +14,13 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
   const { currentUser, currentTenant, allTenants, switchTenant, logout, viewMode, setViewMode } = useAuth();
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const sessionUser = storageEngine.getCurrentUserFromSession();
+    const slug = getSlugFromURL();
+    // Open login modal automatically on initial load if no session exists AND no store slug was specified
+    return !sessionUser && !slug;
+  });
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 

@@ -1,5 +1,8 @@
 import { Tenant, User, Service, StaffMember, Appointment, BusinessHours, InvitationCode } from '../types';
 
+export const SUPER_ADMIN_EMAIL = 'superadmin@ebd.com';
+export const SUPER_ADMIN_DEFAULT_PASSWORD = 'admin123';
+
 const STORAGE_KEYS = {
   TENANTS: 'ebd_tenants_v1',
   USERS: 'ebd_users_v1',
@@ -48,6 +51,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-superadmin',
     email: 'superadmin@ebd.com',
+    password: 'admin123',
     full_name: 'Super Admin Mestre',
     role: 'super_admin',
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
@@ -55,6 +59,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-owner-001',
     email: 'anamaria@ebdbarber.com',
+    password: '123456',
     full_name: 'Ana Maria Dantas',
     role: 'owner',
     tenant_id: 'ebd-tenant-001',
@@ -64,6 +69,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-staff-001',
     email: 'mariana@ebdbarber.com',
+    password: '123456',
     full_name: 'Mariana Silva',
     role: 'staff',
     tenant_id: 'ebd-tenant-001',
@@ -73,6 +79,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-staff-002',
     email: 'carlos@ebdbarber.com',
+    password: '123456',
     full_name: 'Carlos Eduardo (Kadu)',
     role: 'staff',
     tenant_id: 'ebd-tenant-001',
@@ -82,6 +89,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-staff-003',
     email: 'gabriel@ebdbarber.com',
+    password: '123456',
     full_name: 'Gabriel Santos',
     role: 'staff',
     tenant_id: 'ebd-tenant-001',
@@ -247,6 +255,24 @@ export function initStorage(): void {
   if (!localStorage.getItem(STORAGE_KEYS.TENANTS)) {
     setItem(STORAGE_KEYS.TENANTS, DEFAULT_TENANTS);
   }
+
+  // Always ensure super_admin user exists (even if USERS key already has data)
+  const users = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
+  const hasSuperAdmin = users.some(
+    (u) => u.email.toLowerCase() === SUPER_ADMIN_EMAIL && u.role === 'super_admin'
+  );
+  if (!hasSuperAdmin) {
+    users.unshift({
+      id: 'usr-superadmin',
+      email: SUPER_ADMIN_EMAIL,
+      password: SUPER_ADMIN_DEFAULT_PASSWORD,
+      full_name: 'Super Admin Mestre',
+      role: 'super_admin',
+      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    });
+    setItem(STORAGE_KEYS.USERS, users);
+  }
+
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
     setItem(STORAGE_KEYS.USERS, DEFAULT_USERS);
   }
@@ -480,9 +506,43 @@ export const storageEngine = {
   getUsers(): User[] {
     return getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
   },
+  authenticateUser(email: string, password?: string): User | undefined {
+    const users = this.getUsers();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = (password || '').trim();
+
+    const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (!user) return undefined;
+
+    // Check password if set on user
+    if (user.password && user.password !== cleanPass) {
+      return undefined;
+    }
+
+    // Persist session
+    setItem(STORAGE_KEYS.CURRENT_USER_ID, user.id);
+    return user;
+  },
+  getCurrentUserFromSession(): User | null {
+    const userId = getItem<string | null>(STORAGE_KEYS.CURRENT_USER_ID, null);
+    if (!userId) return null;
+    const users = this.getUsers();
+    return users.find((u) => u.id === userId) || null;
+  },
+  logoutSession(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER_ID);
+    } catch (e) {
+      console.error('Error logging out session:', e);
+    }
+  },
   loginByEmail(email: string): User | undefined {
     const users = this.getUsers();
-    return users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    const found = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (found) {
+      setItem(STORAGE_KEYS.CURRENT_USER_ID, found.id);
+    }
+    return found;
   },
   updateUserProfile(userId: string, updates: Partial<User> & { bio?: string }): User {
     const users = this.getUsers();

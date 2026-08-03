@@ -22,9 +22,9 @@ export function getSlugFromURL(): string | null {
     return hashParts[0];
   }
 
-  // 3. Query string check: ?slug=barbearia-vintage or ?vitrine=barbearia-vintage or ?store=barbearia-vintage
+  // 3. Query string check: ?slug=barbearia-vintage or ?vitrine=barbearia-vintage or ?store=barbearia-vintage or ?loja=barbearia-vintage
   const params = new URLSearchParams(window.location.search);
-  const querySlug = params.get('slug') || params.get('vitrine') || params.get('store');
+  const querySlug = params.get('slug') || params.get('vitrine') || params.get('store') || params.get('loja');
   if (querySlug) {
     return querySlug;
   }

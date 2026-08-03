@@ -1,26 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Lock, X, Key } from 'lucide-react';
+import { User, Lock, X, Key, Store, CheckSquare, Square, Shield } from 'lucide-react';
+import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_DEFAULT_PASSWORD } from '../../lib/storageEngine';
 
 interface LoginModalProps {
   onClose: () => void;
   onOpenRegister: () => void;
 }
 
+const REMEMBER_KEY_EMAIL = 'ebd_remembered_email';
+const REMEMBER_KEY_PASS = 'ebd_remembered_pass';
+const REMEMBER_KEY_CHECK = 'ebd_remember_me_active';
+
 export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister }) => {
-  const { login } = useAuth();
+  const { login, setViewMode } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const isRemembered = localStorage.getItem(REMEMBER_KEY_CHECK) === 'true';
+      const savedEmail = localStorage.getItem(REMEMBER_KEY_EMAIL) || '';
+      const savedPass = localStorage.getItem(REMEMBER_KEY_PASS) || '';
+
+      if (isRemembered && savedEmail) {
+        setEmail(savedEmail);
+        setPassword(savedPass);
+        setRememberMe(true);
+      }
+    } catch (e) {
+      console.error('Error reading saved credentials:', e);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    const success = login(email);
+
+    const success = login(email, password);
+    if (success) {
+      try {
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_KEY_CHECK, 'true');
+          localStorage.setItem(REMEMBER_KEY_EMAIL, email.trim());
+          localStorage.setItem(REMEMBER_KEY_PASS, password.trim());
+        } else {
+          localStorage.removeItem(REMEMBER_KEY_CHECK);
+          localStorage.removeItem(REMEMBER_KEY_EMAIL);
+          localStorage.removeItem(REMEMBER_KEY_PASS);
+        }
+      } catch (e) {
+        console.error('Error saving remember credentials:', e);
+      }
+
+      onClose();
+    } else {
+      setErrorMsg('E-mail ou senha incorretos. Por favor, verifique suas credenciais de acesso.');
+    }
+  };
+
+  const handleOpenVitrine = () => {
+    setViewMode('client');
+    onClose();
+  };
+
+  const handleSuperAdminLogin = () => {
+    setErrorMsg(null);
+    const success = login(SUPER_ADMIN_EMAIL, SUPER_ADMIN_DEFAULT_PASSWORD);
     if (success) {
       onClose();
     } else {
-      setErrorMsg('E-mail não encontrado.');
+      setErrorMsg('Erro ao entrar como Super Admin.');
     }
   };
 
@@ -29,7 +81,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
       <div className="bg-[#16191F] border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-slate-800 transition"
+          title="Fechar Janela de Login"
         >
           <X className="w-5 h-5" />
         </button>
@@ -39,7 +92,26 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
             EBD
           </div>
           <h2 className="text-xl font-bold text-white">EBD ElBravoDantas</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Acesse sua conta no SaaS Multi-Tenant</p>
+          <p className="text-xs text-slate-400 mt-0.5">Acesse seu Painel com E-mail e Senha Privada</p>
+        </div>
+
+        {/* Super Admin Quick Access */}
+        <button
+          type="button"
+          onClick={handleSuperAdminLogin}
+          className="w-full mb-4 py-2.5 rounded-lg bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-bold text-xs shadow-md shadow-yellow-500/20 transition cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+        >
+          <Shield className="w-4 h-4" />
+          Entrar como Super Admin Mestre
+        </button>
+
+        <div className="relative mb-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-700"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-[#16191F] px-2 text-slate-500">ou entre com e-mail e senha</span>
+          </div>
         </div>
 
         {errorMsg && (
@@ -50,7 +122,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">E-mail</label>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">E-mail de Acesso</label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -65,7 +137,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Senha</label>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Senha de Acesso</label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -79,22 +151,48 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
             </div>
           </div>
 
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center justify-between text-xs pt-1">
+            <button
+              type="button"
+              onClick={() => setRememberMe(!rememberMe)}
+              className="flex items-center space-x-2 text-slate-300 hover:text-white cursor-pointer select-none"
+            >
+              {rememberMe ? (
+                <CheckSquare className="w-4 h-4 text-yellow-500" />
+              ) : (
+                <Square className="w-4 h-4 text-slate-500" />
+              )}
+              <span className="text-xs font-medium">Salvar dados e lembrar senha neste dispositivo</span>
+            </button>
+          </div>
+
           <button
             type="submit"
-            className="w-full py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xs shadow-md shadow-yellow-500/20 transition cursor-pointer"
+            className="w-full py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xs shadow-md shadow-yellow-500/20 transition cursor-pointer active:scale-95"
           >
             Entrar no Painel
           </button>
         </form>
 
-        {/* Registration by invitation link */}
-        <div className="mt-4 pt-3 text-center border-t border-slate-800/80">
+        {/* Footer Actions: Client Vitrine vs Invitation Register */}
+        <div className="mt-6 pt-4 border-t border-slate-800/80 space-y-2">
           <button
+            type="button"
+            onClick={handleOpenVitrine}
+            className="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 flex items-center justify-center gap-2 transition cursor-pointer"
+          >
+            <Store className="w-4 h-4 text-yellow-500" />
+            <span>Sou Cliente - Acessar Vitrine de Agendamento</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               onClose();
               onOpenRegister();
             }}
-            className="text-xs text-yellow-500 hover:underline font-semibold flex items-center justify-center gap-1.5 mx-auto"
+            className="w-full text-xs text-yellow-500 hover:underline font-semibold flex items-center justify-center gap-1.5 pt-1"
           >
             <Key className="w-3.5 h-3.5" />
             <span>Possui Código de Convite? Registrar Loja</span>
@@ -104,3 +202,4 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
     </div>
   );
 };
+
