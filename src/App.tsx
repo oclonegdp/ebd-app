@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LoginModal } from './components/Auth/LoginModal';
-import { RegisterTenantModal } from './components/Auth/RegisterTenantModal';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { PublicVitrine } from './components/Customer/PublicVitrine';
@@ -17,7 +15,6 @@ import { AccessDeniedScreen } from './components/RBAC/AccessDeniedScreen';
 const MainAppContent: React.FC = () => {
   const { currentUser, viewMode } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (currentUser?.role === 'super_admin') return 'superadmin_dashboard';
     if (currentUser?.role === 'staff') return 'staff_dashboard';
@@ -34,21 +31,6 @@ const MainAppContent: React.FC = () => {
     }
   }, [currentUser?.id, currentUser?.role]);
 
-  // Not logged in — show login modal
-  if (!currentUser) {
-    return (
-      <div className="relative h-screen w-screen bg-[#0F1115] flex items-center justify-center overflow-hidden">
-        <LoginModal
-          onClose={() => {}}
-          onOpenRegister={() => setShowRegister(true)}
-        />
-        {showRegister && (
-          <RegisterTenantModal onClose={() => setShowRegister(false)} />
-        )}
-      </div>
-    );
-  }
-
   // Client view
   if (viewMode === 'client') {
     return (
@@ -62,7 +44,7 @@ const MainAppContent: React.FC = () => {
   }
 
   // Admin view without authorization
-  if (currentUser.role === 'customer') {
+  if (!currentUser || currentUser.role === 'customer') {
     return (
       <div className="min-h-screen bg-[#0F1115] text-slate-100 flex flex-col">
         <Header />

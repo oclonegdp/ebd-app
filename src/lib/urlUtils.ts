@@ -5,15 +5,14 @@
 export function getSlugFromURL(): string | null {
   if (typeof window === 'undefined') return null;
 
-  // 1. Path check: /vitrine/:slug or /:slug
-  const pathname = window.location.pathname;
-  const pathParts = pathname.split('/').filter(Boolean);
-
-  if (pathParts[0] === 'vitrine' && pathParts[1]) {
-    return pathParts[1];
+  // 1. Query string check: ?loja=slug or ?token=slug or ?slug=slug or ?vitrine=slug or ?store=slug
+  const params = new URLSearchParams(window.location.search);
+  const querySlug = params.get('loja') || params.get('token') || params.get('slug') || params.get('vitrine') || params.get('store');
+  if (querySlug) {
+    return querySlug;
   }
 
-  // 2. Hash check: #/vitrine/:slug or #vitrine/:slug or #:slug
+  // 2. Hash check fallback: #/vitrine/:slug or #vitrine/:slug or #:slug
   const hash = window.location.hash.replace(/^#\/?/, '');
   const hashParts = hash.split('/').filter(Boolean);
   if (hashParts[0] === 'vitrine' && hashParts[1]) {
@@ -22,20 +21,21 @@ export function getSlugFromURL(): string | null {
     return hashParts[0];
   }
 
-  // 3. Query string check: ?slug=barbearia-vintage or ?vitrine=barbearia-vintage or ?store=barbearia-vintage or ?loja=barbearia-vintage
-  const params = new URLSearchParams(window.location.search);
-  const querySlug = params.get('slug') || params.get('vitrine') || params.get('store') || params.get('loja');
-  if (querySlug) {
-    return querySlug;
+  // 3. Path check fallback: /vitrine/:slug
+  const pathname = window.location.pathname;
+  const pathParts = pathname.split('/').filter(Boolean);
+
+  if (pathParts[0] === 'vitrine' && pathParts[1]) {
+    return pathParts[1];
   }
 
   return null;
 }
 
 export function getStorePublicUrl(slug: string): string {
-  if (typeof window === 'undefined') return `/vitrine/${slug}`;
+  if (typeof window === 'undefined') return `/?loja=${slug}`;
   const origin = window.location.origin;
-  return `${origin}/vitrine/${slug}`;
+  return `${origin}/?loja=${slug}`;
 }
 
 export function getWhatsAppShareUrl(storeName: string, slug: string): string {
