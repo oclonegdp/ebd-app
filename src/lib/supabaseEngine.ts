@@ -186,9 +186,14 @@ export const supabaseEngine = {
   async deleteTenant(id: string): Promise<void> {
     if (!supabase) { console.warn('[EBD] deleteTenant skipped: no Supabase client'); return; }
     try {
+      await supabase.from('business_hours').delete().eq('tenant_id', id);
+      await supabase.from('appointments').delete().eq('tenant_id', id);
+      await supabase.from('services').delete().eq('tenant_id', id);
+      await supabase.from('staff').delete().eq('tenant_id', id);
+      await supabase.from('users').delete().eq('tenant_id', id);
       const { error } = await supabase.from('tenants').delete().eq('id', id);
       if (error) console.error('[EBD] deleteTenant ERROR:', error.message, error.details);
-      else console.log('[EBD] deleteTenant OK:', id);
+      else console.log('[EBD] deleteTenant OK (all tables cleaned):', id);
     } catch (e) {
       console.error('[EBD] deleteTenant EXCEPTION:', e);
     }
