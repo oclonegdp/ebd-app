@@ -644,6 +644,8 @@ export const storageEngine = {
     const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
     if (!user) return undefined;
 
+    if (!cleanPass) return undefined;
+
     if (user.password) {
       if (isBcryptHash(user.password)) {
         if (!verifyPassword(cleanPass, user.password)) return undefined;
@@ -657,6 +659,8 @@ export const storageEngine = {
           supabaseEngine.upsertUser(users[idx]).catch(() => {});
         }
       }
+    } else {
+      return undefined;
     }
 
     setItem(STORAGE_KEYS.CURRENT_USER_ID, user.id);
@@ -675,14 +679,6 @@ export const storageEngine = {
       console.error('Error logging out session:', e);
     }
   },
-  loginByEmail(email: string): User | undefined {
-    const users = this.getUsers();
-    const found = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (found) {
-      setItem(STORAGE_KEYS.CURRENT_USER_ID, found.id);
-    }
-    return found;
-  },
   updateUserProfile(userId: string, updates: Partial<User> & { bio?: string }): User {
     const users = this.getUsers();
     const idx = users.findIndex((u) => u.id === userId);
@@ -690,7 +686,8 @@ export const storageEngine = {
       throw new Error('Usuário não encontrado.');
     }
 
-    const updatedUser = { ...users[idx], ...updates };
+    const { password: _ignored, ...safeUpdates } = updates;
+    const updatedUser = { ...users[idx], ...safeUpdates };
     users[idx] = updatedUser;
     setItem(STORAGE_KEYS.USERS, users);
 
@@ -746,6 +743,12 @@ export const storageEngine = {
 
     const staff = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
     setItem(STORAGE_KEYS.STAFF, staff.filter((s) => s.tenant_id !== tenantId));
+
+    const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+    setItem(STORAGE_KEYS.APPOINTMENTS, appointments.filter((a) => a.tenant_id !== tenantId));
+
+    const businessHours = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
+    setItem(STORAGE_KEYS.BUSINESS_HOURS, businessHours.filter((h) => (h as any).tenant_id !== tenantId));
   },
 
   // SERVICES
@@ -808,10 +811,13 @@ export const storageEngine = {
 
     let correspondingUser: User;
     if (existingUserIdx !== -1) {
+      const existingRole = users[existingUserIdx].role;
+      const rolePriority: Record<string, number> = { super_admin: 4, owner: 3, staff: 2, customer: 1 };
+      const keepRole = (rolePriority[existingRole] || 0) > (rolePriority['staff'] || 0);
       users[existingUserIdx] = {
         ...users[existingUserIdx],
         full_name: member.name,
-        role: 'staff',
+        role: keepRole ? existingRole : 'staff',
         tenant_id: member.tenant_id,
         avatar_url: member.avatar_url,
         phone: member.phone,

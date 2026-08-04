@@ -99,6 +99,7 @@ export const PublicVitrine: React.FC = () => {
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentTenant || !selectedService || !selectedStaff) return;
+    setFormError(null);
 
     const startHour = parseInt(selectedSlot.split(':')[0]);
     const startMin = parseInt(selectedSlot.split(':')[1] || '0');
