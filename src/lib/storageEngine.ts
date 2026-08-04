@@ -824,17 +824,13 @@ export const storageEngine = {
   },
   hasScheduleConflict(staffId: string, date: string, startTime: string, endTime: string, tenantId?: string, excludeId?: string): boolean {
     const all = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
-    console.log('[EBD CONFLICT] tenantId:', tenantId, '| staffId:', staffId, '| date:', date, '| time:', startTime, '-', endTime, '| total apts:', all.length);
-    const result = all.some((a) => {
+    return all.some((a) => {
       if (a.id === excludeId) return false;
       if (tenantId && a.tenant_id !== tenantId) return false;
       if (a.staff_id !== staffId || a.date !== date) return false;
       if (a.status === 'cancelled') return false;
-      console.log('[EBD CONFLICT] MATCH:', a.id, 'tenant:', a.tenant_id, 'staff:', a.staff_id, 'time:', a.start_time, '-', a.end_time);
       return startTime < a.end_time && endTime > a.start_time;
     });
-    console.log('[EBD CONFLICT] result:', result);
-    return result;
   },
   createAppointment(apt: Omit<Appointment, 'id' | 'created_at'>): Appointment {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
