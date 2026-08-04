@@ -735,20 +735,22 @@ export const storageEngine = {
     setItem(STORAGE_KEYS.TENANTS, tenants.filter((t) => t.id !== tenantId));
     supabaseEngine.deleteTenant(tenantId).catch(() => {});
 
+    const remainingTenantIds = new Set(this.getTenants().map((t) => t.id));
+
     const users = getItem<User[]>(STORAGE_KEYS.USERS, DEFAULT_USERS);
-    setItem(STORAGE_KEYS.USERS, users.filter((u) => u.tenant_id !== tenantId));
+    setItem(STORAGE_KEYS.USERS, users.filter((u) => u.tenant_id && remainingTenantIds.has(u.tenant_id)));
 
     const services = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
-    setItem(STORAGE_KEYS.SERVICES, services.filter((s) => s.tenant_id !== tenantId));
+    setItem(STORAGE_KEYS.SERVICES, services.filter((s) => s.tenant_id && remainingTenantIds.has(s.tenant_id)));
 
     const staff = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
-    setItem(STORAGE_KEYS.STAFF, staff.filter((s) => s.tenant_id !== tenantId));
+    setItem(STORAGE_KEYS.STAFF, staff.filter((s) => s.tenant_id && remainingTenantIds.has(s.tenant_id)));
 
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
-    setItem(STORAGE_KEYS.APPOINTMENTS, appointments.filter((a) => a.tenant_id !== tenantId));
+    setItem(STORAGE_KEYS.APPOINTMENTS, appointments.filter((a) => a.tenant_id && remainingTenantIds.has(a.tenant_id)));
 
     const businessHours = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
-    setItem(STORAGE_KEYS.BUSINESS_HOURS, businessHours.filter((h) => (h as any).tenant_id !== tenantId));
+    setItem(STORAGE_KEYS.BUSINESS_HOURS, businessHours.filter((h) => (h as any).tenant_id && remainingTenantIds.has((h as any).tenant_id)));
   },
 
   // SERVICES
