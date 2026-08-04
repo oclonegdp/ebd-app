@@ -1,5 +1,6 @@
 import { Tenant, User, Service, StaffMember, Appointment, BusinessHours, InvitationCode } from '../types';
 import { supabaseEngine } from './supabaseEngine';
+import { hashPassword, verifyPassword, isBcryptHash } from './password';
 
 const STORAGE_KEYS = {
   TENANTS: 'ebd_tenants_v1',
@@ -49,7 +50,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-superadmin',
     email: 'superadmin@ebd.com',
-    password: 'admin123',
+    password: hashPassword('admin123'),
     full_name: 'Super Admin Mestre',
     role: 'super_admin',
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
@@ -57,7 +58,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-owner-001',
     email: 'anamaria@ebdbarber.com',
-    password: '123456',
+    password: hashPassword('123456'),
     full_name: 'Ana Maria Dantas',
     role: 'owner',
     tenant_id: 'ebd-tenant-001',
@@ -67,7 +68,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-staff-001',
     email: 'mariana@ebdbarber.com',
-    password: '123456',
+    password: hashPassword('123456'),
     full_name: 'Mariana Silva',
     role: 'staff',
     tenant_id: 'ebd-tenant-001',
@@ -77,7 +78,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-staff-002',
     email: 'carlos@ebdbarber.com',
-    password: '123456',
+    password: hashPassword('123456'),
     full_name: 'Carlos Eduardo (Kadu)',
     role: 'staff',
     tenant_id: 'ebd-tenant-001',
@@ -87,7 +88,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: 'usr-staff-003',
     email: 'gabriel@ebdbarber.com',
-    password: '123456',
+    password: hashPassword('123456'),
     full_name: 'Gabriel Santos',
     role: 'staff',
     tenant_id: 'ebd-tenant-001',
@@ -485,14 +486,14 @@ export const storageEngine = {
         role: 'owner',
         tenant_id: newTenant.id,
         phone: params.phone || users[existingUserIdx].phone,
-        ...(params.ownerPassword ? { password: params.ownerPassword } : {}),
+        ...(params.ownerPassword ? { password: hashPassword(params.ownerPassword) } : {}),
       };
       newOwner = users[existingUserIdx];
     } else {
       newOwner = {
         id: `usr-owner-${Date.now()}`,
         email: params.ownerEmail,
-        password: params.ownerPassword || '123456',
+        password: hashPassword(params.ownerPassword || '123456'),
         full_name: params.ownerName,
         role: 'owner',
         tenant_id: newTenant.id,
@@ -581,7 +582,7 @@ export const storageEngine = {
       id: `usr-owner-${Date.now()}`,
       email: params.ownerEmail,
       full_name: params.ownerName,
-      password: '123456',
+      password: hashPassword('123456'),
       role: 'owner',
       tenant_id: newTenant.id,
       phone: params.phone,
@@ -643,12 +644,21 @@ export const storageEngine = {
     const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
     if (!user) return undefined;
 
-    // Check password if set on user
-    if (user.password && user.password !== cleanPass) {
-      return undefined;
+    if (user.password) {
+      if (isBcryptHash(user.password)) {
+        if (!verifyPassword(cleanPass, user.password)) return undefined;
+      } else {
+        if (user.password !== cleanPass) return undefined;
+        user.password = hashPassword(cleanPass);
+        const idx = users.findIndex((u) => u.id === user.id);
+        if (idx !== -1) {
+          users[idx] = { ...users[idx], password: user.password };
+          setItem(STORAGE_KEYS.USERS, users);
+          supabaseEngine.upsertUser(users[idx]).catch(() => {});
+        }
+      }
     }
 
-    // Persist session
     setItem(STORAGE_KEYS.CURRENT_USER_ID, user.id);
     return user;
   },
@@ -805,14 +815,14 @@ export const storageEngine = {
         tenant_id: member.tenant_id,
         avatar_url: member.avatar_url,
         phone: member.phone,
-        ...(password ? { password } : {}),
+        ...(password ? { password: hashPassword(password) } : {}),
       };
       correspondingUser = users[existingUserIdx];
     } else {
       correspondingUser = {
         id: `usr-staff-${Date.now()}`,
         email: member.email,
-        password: password || '123456',
+        password: hashPassword(password || '123456'),
         full_name: member.name,
         role: 'staff',
         tenant_id: member.tenant_id,
