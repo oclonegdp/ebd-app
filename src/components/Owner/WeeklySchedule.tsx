@@ -47,6 +47,8 @@ export const WeeklySchedule: React.FC = () => {
   }, [currentTenant]);
 
   const handleUpdateStatus = (id: string, status: 'completed' | 'cancelled') => {
+    const apt = appointments.find((a) => a.id === id);
+    if (apt?.status === 'cancelled' && status === 'completed') return;
     storageEngine.updateAppointmentStatus(id, status);
     if (currentTenant) {
       setAppointments(storageEngine.getAppointments(currentTenant.id));

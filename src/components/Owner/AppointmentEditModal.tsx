@@ -54,13 +54,14 @@ export const AppointmentEditModal: React.FC<AppointmentEditModalProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalStatus = (appointment.status === 'cancelled' && status === 'completed') ? 'cancelled' : status;
     storageEngine.updateAppointment(appointment.id, {
       customer_name: customerName,
       customer_phone: customerPhone,
       date,
       start_time: startTime,
       price: Number(price),
-      status,
+      status: finalStatus,
       staff_id: staffId,
       service_id: serviceId,
     });

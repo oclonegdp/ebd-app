@@ -115,6 +115,8 @@ export const StaffDashboard: React.FC = () => {
   }, [currentTenant, currentUser]);
 
   const handleUpdateStatus = (id: string, status: 'confirmed' | 'completed' | 'cancelled') => {
+    const apt = appointments.find((a) => a.id === id);
+    if (apt?.status === 'cancelled' && status === 'completed') return;
     storageEngine.updateAppointmentStatus(id, status);
     loadData();
   };

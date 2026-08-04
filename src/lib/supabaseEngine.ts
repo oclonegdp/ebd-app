@@ -221,6 +221,20 @@ export const supabaseEngine = {
     }
   },
 
+  async checkConflictInSupabase(staffId: string, date: string, startTime: string, endTime: string, tenantId?: string, excludeId?: string): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+      let query = supabase.from('appointments').select('id').eq('staff_id', staffId).eq('date', date).neq('status', 'cancelled');
+      if (tenantId) query = query.eq('tenant_id', tenantId);
+      if (excludeId) query = query.neq('id', excludeId);
+      const { data, error } = await query;
+      if (error || !data) return false;
+      return data.some((a: any) => startTime < a.end_time && endTime > a.start_time);
+    } catch {
+      return false;
+    }
+  },
+
   async upsertAppointment(appointment: Appointment): Promise<void> {
     if (!supabase) { console.warn('[EBD] upsertAppointment skipped: no Supabase client'); return; }
     try {

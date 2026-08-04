@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Scissors, Calendar, Clock, MapPin, MessageSquare, CheckCircle2, User, X, Copy, Check, Link as LinkIcon, Store, Search, Filter, AlertCircle, Crown } from 'lucide-react';
 import { storageEngine } from '../../lib/storageEngine';
+import { supabaseEngine } from '../../lib/supabaseEngine';
 import { getStorePublicUrl } from '../../lib/urlUtils';
 import { Service, StaffMember, Appointment } from '../../types';
 import { BannerSkeleton, CardSkeleton, ListSkeleton } from '../UI/LoadingSkeleton';
@@ -108,6 +109,16 @@ export const PublicVitrine: React.FC = () => {
     const endM = totalMin % 60;
 
     try {
+      const endTime = `${endH}:${String(endM).padStart(2, '0')}`;
+
+      const hasServerConflict = await supabaseEngine.checkConflictInSupabase(
+        selectedStaff.id, selectedDate, selectedSlot, endTime, currentTenant.id
+      );
+      if (hasServerConflict) {
+        setFormError('Conflito de horário: este profissional já possui agendamento neste horário.');
+        return;
+      }
+
       const newAppointment = storageEngine.createAppointment({
         tenant_id: currentTenant.id,
         service_id: selectedService.id,
@@ -116,7 +127,7 @@ export const PublicVitrine: React.FC = () => {
         customer_phone: customerPhone,
         date: selectedDate,
         start_time: selectedSlot,
-        end_time: `${endH}:${String(endM).padStart(2, '0')}`,
+        end_time: endTime,
         price: selectedService.price,
         status: 'confirmed',
         payment_method: paymentMethod,
