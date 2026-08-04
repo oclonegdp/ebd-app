@@ -31,15 +31,47 @@ export const PublicVitrine: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<string>('10:00');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'local' | 'online_simulated'>('local');
   const [isSuccess, setIsSuccess] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const availableSlots = [
-    '09:00', '09:45', '10:30', '11:15', '13:00',
-    '13:45', '14:30', '15:15', '16:00', '16:45',
-    '17:30', '18:15', '19:00', '19:45'
-  ];
+  const availableSlots = React.useMemo(() => {
+    if (!currentTenant) return [];
+    const bh = storageEngine.getBusinessHours(currentTenant.id);
+    const dayOfWeek = new Date(selectedDate + 'T12:00:00').getDay();
+    const todayBh = bh.find((h) => h.dayNum === dayOfWeek);
+    if (!todayBh || !todayBh.isOpen) return [];
+
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + (m || 0);
+    };
+    const start = toMin(todayBh.startTime || '09:00');
+    const end = toMin(todayBh.endTime || '19:00');
+    const breakS = todayBh.breakStart ? toMin(todayBh.breakStart) : -1;
+    const breakE = todayBh.breakEnd ? toMin(todayBh.breakEnd) : -1;
+
+    const duration = selectedService?.duration_minutes || 45;
+    const step = 15;
+    const slots: string[] = [];
+    for (let t = start; t + duration <= end; t += step) {
+      if (breakS >= 0 && t < breakE && t + duration > breakS) {
+        t = breakE - step;
+        continue;
+      }
+      const h = Math.floor(t / 60);
+      const m = t % 60;
+      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+    return slots;
+  }, [currentTenant, selectedDate, selectedService]);
+
+  useEffect(() => {
+    if (availableSlots.length > 0 && !availableSlots.includes(selectedSlot)) {
+      setSelectedSlot(availableSlots[0]);
+    }
+  }, [availableSlots, selectedSlot]);
 
   useEffect(() => {
     if (currentTenant) {
@@ -124,6 +156,7 @@ export const PublicVitrine: React.FC = () => {
         service_id: selectedService.id,
         staff_id: selectedStaff.id,
         customer_name: customerName,
+        customer_email: customerEmail || undefined,
         customer_phone: customerPhone,
         date: selectedDate,
         start_time: selectedSlot,
@@ -143,6 +176,7 @@ export const PublicVitrine: React.FC = () => {
         setIsSuccess(false);
         setCustomerName('');
         setCustomerPhone('');
+        setCustomerEmail('');
       }, 2000);
     } catch (err: any) {
       setFormError(err.message || 'Erro ao agendar.');
@@ -254,7 +288,7 @@ export const PublicVitrine: React.FC = () => {
             )}
 
             <a
-              href={`https://wa.me/55${(currentTenant?.phone || '11987654321').replace(/\D/g, '')}`}
+              href={`https://wa.me/${(currentTenant?.phone || '11987654321').replace(/\D/g, '').startsWith('55') ? '' : '55'}${(currentTenant?.phone || '11987654321').replace(/\D/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-2 px-4 py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-xs shadow-md shadow-yellow-500/20 transition cursor-pointer shrink-0"
@@ -572,6 +606,7 @@ export const PublicVitrine: React.FC = () => {
                     <input
                       type="date"
                       value={selectedDate}
+                      min={new Date().toISOString().split('T')[0]}
                       onChange={(e) => setSelectedDate(e.target.value)}
                       className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-500 font-mono"
                     />
@@ -594,6 +629,11 @@ export const PublicVitrine: React.FC = () => {
 
                   <div>
                     <label className="text-xs font-semibold text-slate-300 block mb-1.5">Horários Livres</label>
+                    {availableSlots.length === 0 ? (
+                      <p className="text-[11px] text-red-400 font-semibold py-2">
+                        Nenhum horário disponível para esta data. Por favor escolha outro dia.
+                      </p>
+                    ) : (
                     <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
                       {availableSlots.map((slot) => (
                         <button
@@ -610,6 +650,7 @@ export const PublicVitrine: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -635,6 +676,17 @@ export const PublicVitrine: React.FC = () => {
                         className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-500 font-mono"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">E-mail (opcional)</label>
+                    <input
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      className="w-full bg-[#0F1115] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-500"
+                    />
                   </div>
 
                   <div>
