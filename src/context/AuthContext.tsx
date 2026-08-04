@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Tenant } from '../types';
 import { storageEngine } from '../lib/storageEngine';
 import { getSlugFromURL } from '../lib/urlUtils';
@@ -36,6 +36,7 @@ interface AuthContextType {
   updateProfile: (updates: Partial<User> & { bio?: string }) => void;
   updateCurrentTenant: (updates: Partial<Tenant>) => void;
   refreshData: () => void;
+  syncTenantData: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,11 +60,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isIsolatedVitrine, setIsIsolatedVitrine] = useState(false);
   const [urlSlugError, setUrlSlugError] = useState<string | null>(null);
 
-  // Sync data from Supabase on mount and listen to storage sync events
+  const currentTenantRef = useRef(currentTenant);
+  currentTenantRef.current = currentTenant;
+
+  // Global sync on mount (tenants, users, invitations only)
   useEffect(() => {
     let isMounted = true;
 
-    // Initial Supabase global sync
     storageEngine.syncFromSupabase().then(() => {
       if (isMounted) {
         refreshData();
@@ -83,12 +86,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Tenant-scoped sync when currentTenant changes
+  useEffect(() => {
+    if (currentTenant) {
+      storageEngine.syncFromSupabase(currentTenant.id);
+    }
+  }, [currentTenant?.id]);
+
   // Check URL slug for direct showcase link access
   useEffect(() => {
     const handleUrlSlugCheck = async () => {
       const urlSlug = getSlugFromURL();
       if (urlSlug) {
-        // Try local or fetch directly from Supabase if needed
         const found = await storageEngine.fetchAndSyncTenantBySlug(urlSlug);
         if (found) {
           setCurrentTenant(found);
@@ -117,9 +126,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshData = () => {
     const tenants = storageEngine.getTenants();
     setAllTenants(tenants);
-    if (currentTenant) {
-      const updated = tenants.find((t) => t.id === currentTenant.id);
+    if (currentTenantRef.current) {
+      const updated = tenants.find((t) => t.id === currentTenantRef.current!.id);
       if (updated) setCurrentTenant(updated);
+    }
+  };
+
+  const syncTenantData = () => {
+    if (currentTenantRef.current) {
+      storageEngine.syncFromSupabase(currentTenantRef.current.id);
     }
   };
 
@@ -220,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateProfile,
         updateCurrentTenant,
         refreshData,
+        syncTenantData,
       }}
     >
       {children}

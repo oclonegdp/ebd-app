@@ -279,8 +279,8 @@ export function initStorage(): void {
 // Data API Engine
 export const storageEngine = {
   // SUPABASE SYNC
-  async syncFromSupabase(): Promise<boolean> {
-    const data = await supabaseEngine.syncAllFromSupabase();
+  async syncFromSupabase(tenantId?: string): Promise<boolean> {
+    const data = await supabaseEngine.syncAllFromSupabase(tenantId);
     let hasChanges = false;
 
     function mergeById<T extends { id: string }>(remote: T[], local: T[]): T[] {
@@ -297,7 +297,16 @@ export const storageEngine = {
       }
       return merged;
     }
+    function mergeByTenantId<T extends { tenant_id?: string }>(remote: T[], local: T[], tid: string): T[] {
+      const others = local.filter((l) => l.tenant_id !== tid);
+      return [...remote, ...others];
+    }
+    function mergeBhByTenantId(remote: BusinessHours[], local: BusinessHours[], tid: string): BusinessHours[] {
+      const others = local.filter((l) => (l as any).tenant_id !== tid);
+      return [...remote, ...others];
+    }
 
+    // Global tables (always merge all)
     if (data.tenants && data.tenants.length > 0) {
       const local = getItem<Tenant[]>(STORAGE_KEYS.TENANTS, DEFAULT_TENANTS);
       setItem(STORAGE_KEYS.TENANTS, mergeById(data.tenants, local));
@@ -308,30 +317,56 @@ export const storageEngine = {
       setItem(STORAGE_KEYS.USERS, mergeById(data.users, local));
       hasChanges = true;
     }
-    if (data.services && data.services.length > 0) {
-      const local = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
-      setItem(STORAGE_KEYS.SERVICES, mergeById(data.services, local));
-      hasChanges = true;
-    }
-    if (data.staff && data.staff.length > 0) {
-      const local = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
-      setItem(STORAGE_KEYS.STAFF, mergeById(data.staff, local));
-      hasChanges = true;
-    }
-    if (data.appointments && data.appointments.length > 0) {
-      const local = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
-      setItem(STORAGE_KEYS.APPOINTMENTS, mergeById(data.appointments, local));
-      hasChanges = true;
-    }
-    if (data.businessHours && data.businessHours.length > 0) {
-      const local = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
-      setItem(STORAGE_KEYS.BUSINESS_HOURS, mergeByDayNum(data.businessHours, local));
-      hasChanges = true;
-    }
     if (data.invitations && data.invitations.length > 0) {
       const local = getItem<InvitationCode[]>(STORAGE_KEYS.INVITATION_CODES, DEFAULT_INVITATIONS);
       setItem(STORAGE_KEYS.INVITATION_CODES, mergeById(data.invitations, local));
       hasChanges = true;
+    }
+
+    // Tenant-scoped tables (replace only this tenant's data, keep others)
+    if (tenantId) {
+      if (data.services) {
+        const local = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
+        setItem(STORAGE_KEYS.SERVICES, mergeByTenantId(data.services, local, tenantId));
+        hasChanges = true;
+      }
+      if (data.staff) {
+        const local = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
+        setItem(STORAGE_KEYS.STAFF, mergeByTenantId(data.staff, local, tenantId));
+        hasChanges = true;
+      }
+      if (data.appointments) {
+        const local = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+        setItem(STORAGE_KEYS.APPOINTMENTS, mergeByTenantId(data.appointments, local, tenantId));
+        hasChanges = true;
+      }
+      if (data.businessHours) {
+        const local = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
+        setItem(STORAGE_KEYS.BUSINESS_HOURS, mergeBhByTenantId(data.businessHours, local, tenantId));
+        hasChanges = true;
+      }
+    } else {
+      // Full merge (no tenantId = first load)
+      if (data.services && data.services.length > 0) {
+        const local = getItem<Service[]>(STORAGE_KEYS.SERVICES, DEFAULT_SERVICES);
+        setItem(STORAGE_KEYS.SERVICES, mergeById(data.services, local));
+        hasChanges = true;
+      }
+      if (data.staff && data.staff.length > 0) {
+        const local = getItem<StaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF);
+        setItem(STORAGE_KEYS.STAFF, mergeById(data.staff, local));
+        hasChanges = true;
+      }
+      if (data.appointments && data.appointments.length > 0) {
+        const local = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+        setItem(STORAGE_KEYS.APPOINTMENTS, mergeById(data.appointments, local));
+        hasChanges = true;
+      }
+      if (data.businessHours && data.businessHours.length > 0) {
+        const local = getItem<BusinessHours[]>(STORAGE_KEYS.BUSINESS_HOURS, DEFAULT_BUSINESS_HOURS);
+        setItem(STORAGE_KEYS.BUSINESS_HOURS, mergeByDayNum(data.businessHours, local));
+        hasChanges = true;
+      }
     }
 
     if (hasChanges) {

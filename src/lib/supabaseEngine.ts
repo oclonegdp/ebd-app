@@ -3,9 +3,11 @@ import { Tenant, User, Service, StaffMember, Appointment, BusinessHours, Invitat
 
 export const supabaseEngine = {
   /**
-   * Sync all tables from Supabase into localStorage and return fetched data.
+   * Sync data from Supabase.
+   * - Global sync (no tenantId): tenants, users, invitation_codes (small, auth-related)
+   * - Tenant-scoped sync (with tenantId): services, staff, appointments, business_hours
    */
-  async syncAllFromSupabase(): Promise<{
+  async syncAllFromSupabase(tenantId?: string): Promise<{
     tenants?: Tenant[];
     users?: User[];
     services?: Service[];
@@ -27,36 +29,67 @@ export const supabaseEngine = {
     } = {};
 
     try {
-      // 1. Tenants
-      const { data: tenantsData, error: tenantsError } = await supabase.from('tenants').select('*');
-      if (tenantsError) console.error('[EBD] sync tenants ERROR:', tenantsError.message);
-      else if (tenantsData) result.tenants = tenantsData as Tenant[];
+      // Global tables (always sync, small size)
+      const globalQueries = await Promise.allSettled([
+        supabase.from('tenants').select('*'),
+        supabase.from('users').select('*'),
+        supabase.from('invitation_codes').select('*'),
+      ]);
 
-      // 2. Users
-      const { data: usersData, error: usersError } = await supabase.from('users').select('*');
-      if (usersError) console.error('[EBD] sync users ERROR:', usersError.message);
-      else if (usersData) result.users = usersData as User[];
+      if (globalQueries[0].status === 'fulfilled' && !globalQueries[0].value.error && globalQueries[0].value.data) {
+        result.tenants = globalQueries[0].value.data as Tenant[];
+      } else if (globalQueries[0].status === 'fulfilled' && globalQueries[0].value.error) {
+        console.error('[EBD] sync tenants ERROR:', globalQueries[0].value.error.message);
+      }
 
-      // 3. Services
-      const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
-      if (servicesError) console.error('[EBD] sync services ERROR:', servicesError.message);
-      else if (servicesData) result.services = servicesData as Service[];
+      if (globalQueries[1].status === 'fulfilled' && !globalQueries[1].value.error && globalQueries[1].value.data) {
+        result.users = globalQueries[1].value.data as User[];
+      } else if (globalQueries[1].status === 'fulfilled' && globalQueries[1].value.error) {
+        console.error('[EBD] sync users ERROR:', globalQueries[1].value.error.message);
+      }
 
-      // 4. Staff
-      const { data: staffData, error: staffError } = await supabase.from('staff').select('*');
-      if (staffError) console.error('[EBD] sync staff ERROR:', staffError.message);
-      else if (staffData) result.staff = staffData as StaffMember[];
+      if (globalQueries[2].status === 'fulfilled' && !globalQueries[2].value.error && globalQueries[2].value.data) {
+        result.invitations = globalQueries[2].value.data as InvitationCode[];
+      } else if (globalQueries[2].status === 'fulfilled' && globalQueries[2].value.error) {
+        console.error('[EBD] sync invitations ERROR:', globalQueries[2].value.error.message);
+      }
 
-      // 5. Appointments
-      const { data: aptData, error: aptError } = await supabase.from('appointments').select('*');
-      if (aptError) console.error('[EBD] sync appointments ERROR:', aptError.message);
-      else if (aptData) result.appointments = aptData as Appointment[];
+      // Tenant-scoped tables (filtered by tenant_id when provided)
+      const tenantQueries = await Promise.allSettled([
+        tenantId
+          ? supabase.from('services').select('*').eq('tenant_id', tenantId)
+          : supabase.from('services').select('*'),
+        tenantId
+          ? supabase.from('staff').select('*').eq('tenant_id', tenantId)
+          : supabase.from('staff').select('*'),
+        tenantId
+          ? supabase.from('appointments').select('*').eq('tenant_id', tenantId)
+          : supabase.from('appointments').select('*'),
+        tenantId
+          ? supabase.from('business_hours').select('*').eq('tenant_id', tenantId)
+          : supabase.from('business_hours').select('*'),
+      ]);
 
-      // 6. Business Hours (snake_case → camelCase)
-      const { data: bhData, error: bhError } = await supabase.from('business_hours').select('*');
-      if (bhError) console.error('[EBD] sync business_hours ERROR:', bhError.message);
-      else if (bhData) {
-        result.businessHours = bhData.map((h: any) => ({
+      if (tenantQueries[0].status === 'fulfilled' && !tenantQueries[0].value.error && tenantQueries[0].value.data) {
+        result.services = tenantQueries[0].value.data as Service[];
+      } else if (tenantQueries[0].status === 'fulfilled' && tenantQueries[0].value.error) {
+        console.error('[EBD] sync services ERROR:', tenantQueries[0].value.error.message);
+      }
+
+      if (tenantQueries[1].status === 'fulfilled' && !tenantQueries[1].value.error && tenantQueries[1].value.data) {
+        result.staff = tenantQueries[1].value.data as StaffMember[];
+      } else if (tenantQueries[1].status === 'fulfilled' && tenantQueries[1].value.error) {
+        console.error('[EBD] sync staff ERROR:', tenantQueries[1].value.error.message);
+      }
+
+      if (tenantQueries[2].status === 'fulfilled' && !tenantQueries[2].value.error && tenantQueries[2].value.data) {
+        result.appointments = tenantQueries[2].value.data as Appointment[];
+      } else if (tenantQueries[2].status === 'fulfilled' && tenantQueries[2].value.error) {
+        console.error('[EBD] sync appointments ERROR:', tenantQueries[2].value.error.message);
+      }
+
+      if (tenantQueries[3].status === 'fulfilled' && !tenantQueries[3].value.error && tenantQueries[3].value.data) {
+        result.businessHours = tenantQueries[3].value.data.map((h: any) => ({
           dayNum: h.day_num,
           day: h.day,
           isOpen: h.is_open,
@@ -66,14 +99,10 @@ export const supabaseEngine = {
           breakEnd: h.break_end,
           tenant_id: h.tenant_id,
         })) as BusinessHours[];
+      } else if (tenantQueries[3].status === 'fulfilled' && tenantQueries[3].value.error) {
+        console.error('[EBD] sync business_hours ERROR:', tenantQueries[3].value.error.message);
       }
 
-      // 7. Invitations
-      const { data: invData, error: invError } = await supabase.from('invitation_codes').select('*');
-      if (invError) console.error('[EBD] sync invitation_codes ERROR:', invError.message);
-      else if (invData) result.invitations = invData as InvitationCode[];
-
-      console.log('[EBD] syncAllFromSupabase done:', Object.keys(result).length, 'tables fetched');
     } catch (err) {
       console.error('[EBD] syncAllFromSupabase FATAL:', err);
     }
