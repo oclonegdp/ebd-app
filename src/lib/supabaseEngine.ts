@@ -237,7 +237,10 @@ export const supabaseEngine = {
 
   async upsertAppointment(appointment: Appointment): Promise<void> {
     if (!supabase) { console.warn('[EBD] upsertAppointment skipped: no Supabase client'); return; }
-    const { error } = await supabase.from('appointments').upsert([appointment]).select();
+    // The current production schema does not have customer_email on appointments.
+    // Keep the optional field in the client model, but only send supported columns.
+    const { customer_email: _customerEmail, ...databaseAppointment } = appointment;
+    const { error } = await supabase.from('appointments').upsert([databaseAppointment]).select();
     if (error) throw error;
   },
 
