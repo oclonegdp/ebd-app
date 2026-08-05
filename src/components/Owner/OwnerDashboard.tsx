@@ -62,7 +62,7 @@ export const OwnerDashboard: React.FC = () => {
   };
 
   const totalRevenue = appointments
-    .filter((a) => a.status === 'confirmed' || a.status === 'completed')
+    .filter((a) => a.status === 'completed')
     .reduce((sum, a) => sum + (a.price || 0), 0);
 
   const completedCount = appointments.filter((a) => a.status === 'completed').length;
@@ -395,4 +395,3 @@ export const OwnerDashboard: React.FC = () => {
     </div>
   );
 };
-

@@ -885,7 +885,7 @@ export const storageEngine = {
       return startTime < a.end_time && endTime > a.start_time;
     });
   },
-  createAppointment(apt: Omit<Appointment, 'id' | 'created_at'>): Appointment {
+  async createAppointment(apt: Omit<Appointment, 'id' | 'created_at'>): Promise<Appointment> {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
 
     if (this.hasScheduleConflict(apt.staff_id, apt.date, apt.start_time, apt.end_time, apt.tenant_id)) {
@@ -897,10 +897,10 @@ export const storageEngine = {
       id: `apt-${Date.now()}`,
       created_at: new Date().toISOString(),
     };
+    // Persist remotely before confirming so a reload cannot lose the booking.
+    await supabaseEngine.upsertAppointment(newApt);
     appointments.unshift(newApt);
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments);
-
-    supabaseEngine.upsertAppointment(newApt).catch(() => {});
     return newApt;
   },
   updateAppointmentStatus(id: string, status: 'confirmed' | 'completed' | 'cancelled'): void {

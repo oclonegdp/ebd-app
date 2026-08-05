@@ -174,7 +174,7 @@ export const PublicVitrine: React.FC = () => {
         return;
       }
 
-      const newAppointment = storageEngine.createAppointment({
+      const newAppointment = await storageEngine.createAppointment({
         tenant_id: currentTenant.id,
         service_id: selectedService.id,
         staff_id: selectedStaff.id,

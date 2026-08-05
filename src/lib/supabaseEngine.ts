@@ -237,13 +237,8 @@ export const supabaseEngine = {
 
   async upsertAppointment(appointment: Appointment): Promise<void> {
     if (!supabase) { console.warn('[EBD] upsertAppointment skipped: no Supabase client'); return; }
-    try {
-      const { data, error } = await supabase.from('appointments').upsert([appointment]).select();
-      if (error) console.error('[EBD] upsertAppointment ERROR:', error.message, error.details);
-      else console.log('[EBD] upsertAppointment OK:', appointment.id);
-    } catch (e) {
-      console.error('[EBD] upsertAppointment EXCEPTION:', e);
-    }
+    const { error } = await supabase.from('appointments').upsert([appointment]).select();
+    if (error) throw error;
   },
 
   async deleteAppointment(id: string): Promise<void> {
