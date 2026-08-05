@@ -36,7 +36,7 @@ export const PublicVitrine: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const availableSlots = React.useMemo(() => {
+  const timeSlots = React.useMemo(() => {
     if (!currentTenant) return [];
     const bh = storageEngine.getBusinessHours(currentTenant.id);
     const dayOfWeek = new Date(selectedDate + 'T12:00:00').getDay();
@@ -49,23 +49,46 @@ export const PublicVitrine: React.FC = () => {
     };
     const start = toMin(todayBh.startTime || '09:00');
     const end = toMin(todayBh.endTime || '19:00');
-    const breakS = todayBh.breakStart ? toMin(todayBh.breakStart) : -1;
-    const breakE = todayBh.breakEnd ? toMin(todayBh.breakEnd) : -1;
-
     const duration = selectedService?.duration_minutes || 45;
     const step = 15;
     const slots: string[] = [];
     for (let t = start; t + duration <= end; t += step) {
-      if (breakS >= 0 && t < breakE && t + duration > breakS) {
-        t = breakE - step;
-        continue;
-      }
       const h = Math.floor(t / 60);
       const m = t % 60;
       slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
     }
     return slots;
   }, [currentTenant, selectedDate, selectedService]);
+
+  const toMinutes = (value: string) => {
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + (minutes || 0);
+  };
+
+  const getSlotStatus = (slot: string): 'free' | 'booked' | 'lunch' => {
+    if (!currentTenant || !selectedStaff || !selectedService) return 'free';
+    const bh = storageEngine.getBusinessHours(currentTenant.id);
+    const dayOfWeek = new Date(selectedDate + 'T12:00:00').getDay();
+    const todayBh = bh.find((h) => h.dayNum === dayOfWeek);
+    const start = toMinutes(slot);
+    const end = start + selectedService.duration_minutes;
+
+    if (todayBh?.breakStart && todayBh?.breakEnd) {
+      const breakStart = toMinutes(todayBh.breakStart);
+      const breakEnd = toMinutes(todayBh.breakEnd);
+      if (start < breakEnd && end > breakStart) return 'lunch';
+    }
+
+    const hasAppointment = appointments.some((appointment) => {
+      if (appointment.tenant_id !== currentTenant.id || appointment.staff_id !== selectedStaff.id) return false;
+      if (appointment.date !== selectedDate || appointment.status === 'cancelled') return false;
+      return start < toMinutes(appointment.end_time) && end > toMinutes(appointment.start_time);
+    });
+
+    return hasAppointment ? 'booked' : 'free';
+  };
+
+  const availableSlots = timeSlots.filter((slot) => getSlotStatus(slot) === 'free');
 
   useEffect(() => {
     if (availableSlots.length > 0 && !availableSlots.includes(selectedSlot)) {
@@ -629,26 +652,48 @@ export const PublicVitrine: React.FC = () => {
 
                   <div>
                     <label className="text-xs font-semibold text-slate-300 block mb-1.5">Horários Livres</label>
-                    {availableSlots.length === 0 ? (
+                    {timeSlots.length === 0 ? (
                       <p className="text-[11px] text-red-400 font-semibold py-2">
                         Nenhum horário disponível para esta data. Por favor escolha outro dia.
                       </p>
                     ) : (
-                    <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
-                      {availableSlots.map((slot) => (
-                        <button
-                          type="button"
-                          key={slot}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`py-1.5 text-[11px] font-bold rounded-lg border font-mono transition ${
-                            selectedSlot === slot
-                              ? 'bg-yellow-500 text-black border-yellow-400 shadow-md shadow-yellow-500/20'
-                              : 'bg-[#0F1115] text-slate-300 border-slate-700 hover:bg-slate-800'
-                          }`}
-                        >
-                          {slot}
-                        </button>
-                      ))}
+                    <div>
+                      <div className="flex flex-wrap gap-2 mb-2 text-[10px] font-semibold text-slate-400">
+                        <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-emerald-400" /> Livre</span>
+                        <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-red-400" /> Agendado</span>
+                        <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-purple-400" /> Almoço</span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
+                        {timeSlots.map((slot) => {
+                          const status = getSlotStatus(slot);
+                          const isDisabled = status !== 'free';
+                          return (
+                            <button
+                              type="button"
+                              key={slot}
+                              disabled={isDisabled}
+                              onClick={() => setSelectedSlot(slot)}
+                              title={status === 'booked' ? 'Horário já agendado' : status === 'lunch' ? 'Horário de almoço' : 'Selecionar horário'}
+                              className={`py-1.5 text-[11px] font-bold rounded-lg border font-mono transition ${
+                                status === 'booked'
+                                  ? 'bg-red-500/15 text-red-300 border-red-500/40 cursor-not-allowed'
+                                  : status === 'lunch'
+                                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/40 cursor-not-allowed'
+                                  : selectedSlot === slot
+                                  ? 'bg-yellow-500 text-black border-yellow-400 shadow-md shadow-yellow-500/20'
+                                  : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {availableSlots.length === 0 && (
+                        <p className="text-[11px] text-red-400 font-semibold mt-2">
+                          Todos os horários desta data estão ocupados ou dentro do almoço.
+                        </p>
+                      )}
                     </div>
                     )}
                   </div>
@@ -741,4 +786,3 @@ export const PublicVitrine: React.FC = () => {
     </div>
   );
 };
-
