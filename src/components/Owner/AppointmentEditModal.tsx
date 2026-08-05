@@ -52,19 +52,24 @@ export const AppointmentEditModal: React.FC<AppointmentEditModalProps> = ({
 
   if (!isOpen || !appointment) return null;
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalStatus = (appointment.status === 'cancelled' && status === 'completed') ? 'cancelled' : status;
-    storageEngine.updateAppointment(appointment.id, {
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      date,
-      start_time: startTime,
-      price: Number(price),
-      status: finalStatus,
-      staff_id: staffId,
-      service_id: serviceId,
-    });
+    try {
+      await storageEngine.updateAppointment(appointment.id, {
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        date,
+        start_time: startTime,
+        price: Number(price),
+        status: finalStatus,
+        staff_id: staffId,
+        service_id: serviceId,
+      });
+    } catch (error: any) {
+      alert(error.message || 'Não foi possível salvar o agendamento.');
+      return;
+    }
 
     setSuccessMsg(true);
     setTimeout(() => {
@@ -74,8 +79,13 @@ export const AppointmentEditModal: React.FC<AppointmentEditModalProps> = ({
     }, 1000);
   };
 
-  const handleDelete = () => {
-    storageEngine.deleteAppointment(appointment.id);
+  const handleDelete = async () => {
+    try {
+      await storageEngine.deleteAppointment(appointment.id);
+    } catch (error: any) {
+      alert(error.message || 'Não foi possível excluir o agendamento.');
+      return;
+    }
     onUpdated();
     onClose();
   };

@@ -903,34 +903,31 @@ export const storageEngine = {
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments);
     return newApt;
   },
-  updateAppointmentStatus(id: string, status: 'confirmed' | 'completed' | 'cancelled'): void {
+  async updateAppointmentStatus(id: string, status: 'confirmed' | 'completed' | 'cancelled'): Promise<void> {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
     const updated = appointments.map((a) => (a.id === id ? { ...a, status } : a));
-    setItem(STORAGE_KEYS.APPOINTMENTS, updated);
-
     const target = updated.find((a) => a.id === id);
     if (target) {
-      supabaseEngine.upsertAppointment(target).catch(() => {});
+      await supabaseEngine.upsertAppointment(target);
+      setItem(STORAGE_KEYS.APPOINTMENTS, updated);
     }
   },
-  updateAppointment(id: string, updates: Partial<Appointment>): Appointment {
+  async updateAppointment(id: string, updates: Partial<Appointment>): Promise<Appointment> {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
     const idx = appointments.findIndex((a) => a.id === id);
     if (idx === -1) {
       throw new Error('Agendamento não encontrado.');
     }
     const updated = { ...appointments[idx], ...updates };
+    await supabaseEngine.upsertAppointment(updated);
     appointments[idx] = updated;
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments);
-
-    supabaseEngine.upsertAppointment(updated).catch(() => {});
     return updated;
   },
-  deleteAppointment(id: string): void {
+  async deleteAppointment(id: string): Promise<void> {
     const appointments = getItem<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, DEFAULT_APPOINTMENTS);
+    await supabaseEngine.deleteAppointment(id);
     setItem(STORAGE_KEYS.APPOINTMENTS, appointments.filter((a) => a.id !== id));
-
-    supabaseEngine.deleteAppointment(id).catch(() => {});
   },
 
   // BUSINESS HOURS (per-tenant)

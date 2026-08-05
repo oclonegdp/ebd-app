@@ -46,12 +46,16 @@ export const WeeklySchedule: React.FC = () => {
     };
   }, [currentTenant]);
 
-  const handleUpdateStatus = (id: string, status: 'completed' | 'cancelled') => {
+  const handleUpdateStatus = async (id: string, status: 'completed' | 'cancelled') => {
     const apt = appointments.find((a) => a.id === id);
     if (apt?.status === 'cancelled' && status === 'completed') return;
-    storageEngine.updateAppointmentStatus(id, status);
-    if (currentTenant) {
-      setAppointments(storageEngine.getAppointments(currentTenant.id));
+    try {
+      await storageEngine.updateAppointmentStatus(id, status);
+      if (currentTenant) {
+        setAppointments(storageEngine.getAppointments(currentTenant.id));
+      }
+    } catch (error: any) {
+      alert(error.message || 'Não foi possível atualizar o agendamento.');
     }
   };
 
@@ -266,4 +270,3 @@ export const WeeklySchedule: React.FC = () => {
     </div>
   );
 };
-

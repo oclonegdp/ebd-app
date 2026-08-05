@@ -246,13 +246,8 @@ export const supabaseEngine = {
 
   async deleteAppointment(id: string): Promise<void> {
     if (!supabase) { console.warn('[EBD] deleteAppointment skipped: no Supabase client'); return; }
-    try {
-      const { error } = await supabase.from('appointments').delete().eq('id', id);
-      if (error) console.error('[EBD] deleteAppointment ERROR:', error.message, error.details);
-      else console.log('[EBD] deleteAppointment OK:', id);
-    } catch (e) {
-      console.error('[EBD] deleteAppointment EXCEPTION:', e);
-    }
+    const { error } = await supabase.from('appointments').delete().eq('id', id);
+    if (error) throw error;
   },
 
   async saveBusinessHours(hours: BusinessHours[]): Promise<void> {

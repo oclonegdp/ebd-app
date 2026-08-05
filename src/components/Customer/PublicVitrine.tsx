@@ -207,10 +207,14 @@ export const PublicVitrine: React.FC = () => {
   };
 
   const handleCancelAppointment = async (id: string) => {
-    storageEngine.updateAppointmentStatus(id, 'cancelled');
-    window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
-    if (currentTenant) {
-      setAppointments(storageEngine.getAppointments(currentTenant.id));
+    try {
+      await storageEngine.updateAppointmentStatus(id, 'cancelled');
+      window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
+      if (currentTenant) {
+        setAppointments(storageEngine.getAppointments(currentTenant.id));
+      }
+    } catch (error: any) {
+      setFormError(error.message || 'Não foi possível cancelar o agendamento.');
     }
   };
 

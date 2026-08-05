@@ -114,11 +114,15 @@ export const StaffDashboard: React.FC = () => {
     loadData();
   }, [currentTenant, currentUser]);
 
-  const handleUpdateStatus = (id: string, status: 'confirmed' | 'completed' | 'cancelled') => {
+  const handleUpdateStatus = async (id: string, status: 'confirmed' | 'completed' | 'cancelled') => {
     const apt = appointments.find((a) => a.id === id);
     if (apt?.status === 'cancelled' && status === 'completed') return;
-    storageEngine.updateAppointmentStatus(id, status);
-    loadData();
+    try {
+      await storageEngine.updateAppointmentStatus(id, status);
+      loadData();
+    } catch (error: any) {
+      alert(error.message || 'Não foi possível atualizar o agendamento.');
+    }
   };
 
   // Filter appointments by selected period
