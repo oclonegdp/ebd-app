@@ -64,6 +64,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const currentTenantRef = useRef(currentTenant);
   currentTenantRef.current = currentTenant;
 
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    let mounted = true;
+
+    const restoreSession = async () => {
+      const { data: sessionData } = await client.auth.getSession();
+      const authUser = sessionData.session?.user;
+      if (!authUser) return;
+
+      const { data: profile } = await client
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authUser.id)
+        .single();
+      if (mounted && profile) {
+        setCurrentUser(profile as User);
+        if (profile.tenant_id) switchTenant(profile.tenant_id);
+        setViewMode(profile.role === 'customer' ? 'client' : 'admin');
+      }
+    };
+
+    restoreSession().catch(() => {});
+    const { data: listener } = client.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') setCurrentUser(null);
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
   // Global sync on mount (tenants, users, invitations only)
   useEffect(() => {
     let isMounted = true;
