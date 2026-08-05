@@ -65,7 +65,7 @@ export const PublicVitrine: React.FC = () => {
     return hours * 60 + (minutes || 0);
   };
 
-  const getSlotStatus = (slot: string): 'free' | 'booked' | 'lunch' => {
+  const getSlotStatus = (slot: string): 'free' | 'booked' | 'conflict' | 'lunch' => {
     if (!currentTenant || !selectedStaff || !selectedService) return 'free';
     const bh = storageEngine.getBusinessHours(currentTenant.id);
     const dayOfWeek = new Date(selectedDate + 'T12:00:00').getDay();
@@ -79,13 +79,14 @@ export const PublicVitrine: React.FC = () => {
       if (start < breakEnd && end > breakStart) return 'lunch';
     }
 
-    const hasAppointment = appointments.some((appointment) => {
+    const appointment = appointments.find((appointment) => {
       if (appointment.tenant_id !== currentTenant.id || appointment.staff_id !== selectedStaff.id) return false;
       if (appointment.date !== selectedDate || appointment.status === 'cancelled') return false;
       return start < toMinutes(appointment.end_time) && end > toMinutes(appointment.start_time);
     });
 
-    return hasAppointment ? 'booked' : 'free';
+    if (!appointment) return 'free';
+    return appointment.start_time === slot ? 'booked' : 'conflict';
   };
 
   const availableSlots = timeSlots.filter((slot) => getSlotStatus(slot) === 'free');
@@ -665,6 +666,7 @@ export const PublicVitrine: React.FC = () => {
                       <div className="flex flex-wrap gap-2 mb-2 text-[10px] font-semibold text-slate-400">
                         <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-emerald-400" /> Livre</span>
                         <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-red-400" /> Agendado</span>
+                        <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-orange-400" /> Conflito</span>
                         <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full bg-purple-400" /> Almoço</span>
                       </div>
                       <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
@@ -677,10 +679,12 @@ export const PublicVitrine: React.FC = () => {
                               key={slot}
                               disabled={isDisabled}
                               onClick={() => setSelectedSlot(slot)}
-                              title={status === 'booked' ? 'Horário já agendado' : status === 'lunch' ? 'Horário de almoço' : 'Selecionar horário'}
+                              title={status === 'booked' ? 'Horário reservado' : status === 'conflict' ? 'Conflita com outro atendimento' : status === 'lunch' ? 'Horário de almoço' : 'Selecionar horário'}
                               className={`py-1.5 text-[11px] font-bold rounded-lg border font-mono transition ${
                                 status === 'booked'
                                   ? 'bg-red-500/15 text-red-300 border-red-500/40 cursor-not-allowed'
+                                  : status === 'conflict'
+                                  ? 'bg-orange-500/15 text-orange-300 border-orange-500/40 cursor-not-allowed'
                                   : status === 'lunch'
                                   ? 'bg-purple-500/15 text-purple-300 border-purple-500/40 cursor-not-allowed'
                                   : selectedSlot === slot
