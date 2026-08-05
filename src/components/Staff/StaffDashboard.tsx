@@ -136,21 +136,16 @@ export const StaffDashboard: React.FC = () => {
   const completedCount = completedPeriodAppointments.length;
   const confirmedCount = periodAppointments.filter((a) => a.status === 'confirmed').length;
 
-  // Gross Revenue (all non-cancelled or completed in period)
-  const grossRevenue = periodAppointments
-    .filter((a) => a.status !== 'cancelled')
-    .reduce((acc, a) => acc + (a.price || 0), 0);
-
   const completedRevenue = completedPeriodAppointments.reduce((acc, a) => acc + (a.price || 0), 0);
 
   // Commission Rate
   const commissionRate = myStaffProfile?.commission_rate ?? 50;
-  const estimatedCommission = (grossRevenue * commissionRate) / 100;
+  const estimatedCommission = (completedRevenue * commissionRate) / 100;
 
   // Average Ticket
   const ticketMedio = completedCount > 0
     ? completedRevenue / completedCount
-    : (totalPeriodCount > 0 ? grossRevenue / totalPeriodCount : 0);
+    : 0;
 
   // Further filter periodAppointments by Status and Search for the Agenda table
   const displayedAppointments = periodAppointments.filter((apt) => {
@@ -339,7 +334,7 @@ export const StaffDashboard: React.FC = () => {
                   <DollarSign className="w-4 h-4 text-emerald-400" />
                 </div>
                 <p className="text-xl sm:text-2xl font-black text-white font-mono">
-                  R$ {grossRevenue.toFixed(2)}
+                  R$ {completedRevenue.toFixed(2)}
                 </p>
                 <p className="text-[10px] text-slate-500">
                   {completedCount} concluído(s) / {totalPeriodCount} total
