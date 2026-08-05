@@ -5,7 +5,7 @@ import { storageEngine } from '../../lib/storageEngine';
 import { supabaseEngine } from '../../lib/supabaseEngine';
 import { getStorePublicUrl } from '../../lib/urlUtils';
 import { Service, StaffMember, Appointment } from '../../types';
-import { BannerSkeleton, CardSkeleton, ListSkeleton } from '../UI/LoadingSkeleton';
+import { BannerSkeleton, CardSkeleton } from '../UI/LoadingSkeleton';
 import { computeTenantGamification } from '../Staff/StaffGamification';
 
 export const PublicVitrine: React.FC = () => {
@@ -203,14 +203,6 @@ export const PublicVitrine: React.FC = () => {
       }, 2000);
     } catch (err: any) {
       setFormError(err.message || 'Erro ao agendar.');
-    }
-  };
-
-  const handleCancelAppointment = async (id: string) => {
-    storageEngine.updateAppointmentStatus(id, 'cancelled');
-    window.dispatchEvent(new CustomEvent('ebd_storage_synced'));
-    if (currentTenant) {
-      setAppointments(storageEngine.getAppointments(currentTenant.id));
     }
   };
 
@@ -486,64 +478,17 @@ export const PublicVitrine: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: "Meus Agendamentos" */}
+        {/* Right Column: booking privacy */}
         <div className="bg-[#16191F] border border-slate-800 rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h2 className="text-base font-bold text-white">Meus Agendamentos</h2>
-              <span className="text-xs text-slate-400 font-mono">{appointments.length} Ativos</span>
+              <h2 className="text-base font-bold text-white">Seu agendamento</h2>
             </div>
-
-            {isLoading ? (
-              <ListSkeleton count={3} />
-            ) : (
-              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                {appointments.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-8 text-center">Você não possui agendamentos ativos.</p>
-                ) : (
-                  appointments.map((apt) => (
-                    <div
-                      key={apt.id}
-                      className="p-4 bg-slate-800/30 border border-slate-800 rounded-lg space-y-2 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">{services.find((s) => s.id === apt.service_id)?.name || 'Serviço'}</span>
-                        <span className="text-xs font-bold text-yellow-500 font-mono">R$ {apt.price ? apt.price.toFixed(2) : '0.00'}</span>
-                      </div>
-
-                      <p className="text-[11px] font-mono text-yellow-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {apt.date} - {apt.start_time} às {apt.end_time}
-                      </p>
-
-                      <p className="text-[11px] text-slate-400">Cliente: {apt.customer_name}</p>
-
-                      <div className="pt-2 flex items-center justify-between border-t border-slate-800">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${
-                            apt.status === 'confirmed'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : apt.status === 'completed'
-                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          }`}
-                        >
-                          {apt.status}
-                        </span>
-
-                        {apt.status === 'confirmed' && (
-                          <button
-                            onClick={() => handleCancelAppointment(apt.id)}
-                            className="px-3 py-1 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-[10px] shadow-sm transition cursor-pointer"
-                          >
-                            Cancelar
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+            <div className="py-8 text-center space-y-3">
+              <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+              <p className="text-xs text-slate-300 font-semibold">Escolha um horário disponível para reservar seu atendimento.</p>
+              <p className="text-[11px] text-slate-500">Por privacidade, os agendamentos de outros clientes não são exibidos nesta vitrine.</p>
+            </div>
           </div>
         </div>
       </div>

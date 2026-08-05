@@ -8,25 +8,22 @@ interface LoginModalProps {
 }
 
 const REMEMBER_KEY_EMAIL = 'ebd_remembered_email';
-const REMEMBER_KEY_PASS = 'ebd_remembered_pass';
 const REMEMBER_KEY_CHECK = 'ebd_remember_me_active';
 
 export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister }) => {
   const { login, setViewMode } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const isRemembered = localStorage.getItem(REMEMBER_KEY_CHECK) === 'true';
       const savedEmail = localStorage.getItem(REMEMBER_KEY_EMAIL) || '';
-      const savedPass = localStorage.getItem(REMEMBER_KEY_PASS) || '';
 
       if (isRemembered && savedEmail) {
         setEmail(savedEmail);
-        setPassword(savedPass);
         setRememberMe(true);
       }
     } catch (e) {
@@ -44,11 +41,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
         if (rememberMe) {
           localStorage.setItem(REMEMBER_KEY_CHECK, 'true');
           localStorage.setItem(REMEMBER_KEY_EMAIL, email.trim());
-          localStorage.setItem(REMEMBER_KEY_PASS, password.trim());
         } else {
           localStorage.removeItem(REMEMBER_KEY_CHECK);
           localStorage.removeItem(REMEMBER_KEY_EMAIL);
-          localStorage.removeItem(REMEMBER_KEY_PASS);
         }
       } catch (e) {
         console.error('Error saving remember credentials:', e);
@@ -133,7 +128,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
               ) : (
                 <Square className="w-4 h-4 text-slate-500" />
               )}
-              <span className="text-xs font-medium">Salvar dados e lembrar senha neste dispositivo</span>
+               <span className="text-xs font-medium">Lembrar e-mail neste dispositivo</span>
             </button>
           </div>
 
@@ -172,4 +167,3 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
     </div>
   );
 };
-
