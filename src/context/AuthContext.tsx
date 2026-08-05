@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { User, Tenant } from '../types';
 import { storageEngine } from '../lib/storageEngine';
 import { getSlugFromURL } from '../lib/urlUtils';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -12,8 +13,8 @@ interface AuthContextType {
   urlSlugError: string | null;
   setViewMode: (mode: 'admin' | 'client') => void;
   switchTenant: (tenantId: string) => void;
-  login: (email: string, password?: string) => boolean;
-  logout: () => void;
+  login: (email: string, password?: string) => Promise<boolean>;
+  logout: () => Promise<void>;
   registerTenantWithInvite: (data: {
     invitationCode: string;
     name: string;
@@ -43,7 +44,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    return storageEngine.getCurrentUserFromSession();
+    return supabase ? null : storageEngine.getCurrentUserFromSession();
   });
 
   const [allTenants, setAllTenants] = useState<Tenant[]>(() => storageEngine.getTenants());
@@ -146,7 +147,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = (email: string, password?: string): boolean => {
+  const login = async (email: string, password?: string): Promise<boolean> => {
+    if (supabase) {
+      if (!password) return false;
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error || !data.user) return false;
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', data.user.id)
+        .single();
+      if (!profile) {
+        await supabase.auth.signOut();
+        return false;
+      }
+
+      setCurrentUser(profile as User);
+      if (profile.tenant_id) switchTenant(profile.tenant_id);
+      setViewMode(profile.role === 'customer' ? 'client' : 'admin');
+      return true;
+    }
+
     const user = storageEngine.authenticateUser(email, password);
     if (user) {
       setCurrentUser(user);
@@ -163,7 +185,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (supabase) await supabase.auth.signOut();
     storageEngine.logoutSession();
     setCurrentUser(null);
     setViewMode('client');

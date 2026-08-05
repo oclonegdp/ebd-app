@@ -4,6 +4,7 @@ export interface User {
   id: string;
   email: string;
   password?: string;
+  auth_user_id?: string;
   full_name: string;
   role: UserRole;
   tenant_id?: string;

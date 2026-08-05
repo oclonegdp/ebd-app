@@ -54,14 +54,17 @@ export const supabaseEngine = {
         console.error('[EBD] sync invitations ERROR:', globalQueries[2].value.error.message);
       }
 
+      const { data: authSession } = await supabase.auth.getSession();
+      const staffTable = authSession.session ? 'staff' : 'public_staff';
+
       // Tenant-scoped tables (filtered by tenant_id when provided)
       const tenantQueries = await Promise.allSettled([
         tenantId
           ? supabase.from('services').select('*').eq('tenant_id', tenantId)
           : supabase.from('services').select('*'),
         tenantId
-          ? supabase.from('staff').select('*').eq('tenant_id', tenantId)
-          : supabase.from('staff').select('*'),
+          ? supabase.from(staffTable).select('*').eq('tenant_id', tenantId)
+          : supabase.from(staffTable).select('*'),
         tenantId
           ? supabase.from('appointments').select('*').eq('tenant_id', tenantId)
           : supabase.from('appointments').select('*'),
@@ -142,7 +145,8 @@ export const supabaseEngine = {
   async upsertUser(user: User): Promise<void> {
     if (!supabase) { console.warn('[EBD] upsertUser skipped: no Supabase client'); return; }
     try {
-      const { data, error } = await supabase.from('users').upsert([user]).select();
+      const { password: _password, ...safeUser } = user;
+      const { data, error } = await supabase.from('users').upsert([safeUser]).select();
       if (error) console.error('[EBD] upsertUser ERROR:', error.message, error.details);
       else console.log('[EBD] upsertUser OK:', user.id);
     } catch (e) {

@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Lock, X, Key, Store, CheckSquare, Square } from 'lucide-react';
+import { User, Lock, X, Store, CheckSquare, Square } from 'lucide-react';
 
 interface LoginModalProps {
   onClose: () => void;
-  onOpenRegister: () => void;
 }
 
 const REMEMBER_KEY_EMAIL = 'ebd_remembered_email';
 const REMEMBER_KEY_CHECK = 'ebd_remember_me_active';
 
-export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister }) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
   const { login, setViewMode } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -31,11 +31,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setIsSubmitting(true);
 
-    const success = login(email, password);
+    const success = await login(email, password);
     if (success) {
       try {
         if (rememberMe) {
@@ -53,6 +54,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
     } else {
       setErrorMsg('E-mail ou senha incorretos. Por favor, verifique suas credenciais de acesso.');
     }
+    setIsSubmitting(false);
   };
 
   const handleOpenVitrine = () => {
@@ -134,9 +136,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
 
           <button
             type="submit"
-            className="w-full py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xs shadow-md shadow-yellow-500/20 transition cursor-pointer active:scale-95"
+             disabled={isSubmitting}
+             className="w-full py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xs shadow-md shadow-yellow-500/20 transition cursor-pointer active:scale-95 disabled:opacity-50"
           >
-            Entrar no Painel
+             {isSubmitting ? 'Entrando...' : 'Entrar no Painel'}
           </button>
         </form>
 
@@ -151,17 +154,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenRegister 
             <span>Sou Cliente - Acessar Vitrine de Agendamento</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onOpenRegister();
-            }}
-            className="w-full text-xs text-yellow-500 hover:underline font-semibold flex items-center justify-center gap-1.5 pt-1"
-          >
-            <Key className="w-3.5 h-3.5" />
-            <span>Possui Código de Convite? Registrar Loja</span>
-          </button>
         </div>
       </div>
     </div>

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Store, LogIn, LogOut, Building2, Menu, User, Settings } from 'lucide-react';
 import { LoginModal } from './Auth/LoginModal';
-import { RegisterTenantModal } from './Auth/RegisterTenantModal';
 import { UserProfileModal } from './Auth/UserProfileModal';
 import { storageEngine } from '../lib/storageEngine';
 import { getSlugFromURL } from '../lib/urlUtils';
@@ -21,7 +20,6 @@ export const Header: React.FC<HeaderProps> = ({ isMobileMenuOpen, setIsMobileMen
     // Open login modal automatically on initial load if no session exists AND no store slug was specified
     return !sessionUser && !slug;
   });
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   return (
@@ -160,12 +158,7 @@ export const Header: React.FC<HeaderProps> = ({ isMobileMenuOpen, setIsMobileMen
       {isLoginModalOpen && (
         <LoginModal
           onClose={() => setIsLoginModalOpen(false)}
-          onOpenRegister={() => setIsRegisterModalOpen(true)}
         />
-      )}
-
-      {isRegisterModalOpen && (
-        <RegisterTenantModal onClose={() => setIsRegisterModalOpen(false)} />
       )}
 
       <UserProfileModal
@@ -175,4 +168,3 @@ export const Header: React.FC<HeaderProps> = ({ isMobileMenuOpen, setIsMobileMen
     </>
   );
 };
-
